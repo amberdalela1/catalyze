@@ -1,0 +1,66 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-700);
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-base);
+  color: var(--color-gray-900);
+  background-color: var(--color-white);
+  border: 1.5px solid var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  min-height: 48px;
+}
+
+.input::placeholder {
+  color: var(--color-gray-400);
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.inputError {
+  border-color: var(--color-error);
+}
+
+.inputError:focus {
+  box-shadow: 0 0 0 3px var(--color-error-light);
+}
+
+.hasIcon {
+  padding-left: 44px;
+}
+
+.icon {
+  position: absolute;
+  left: var(--space-4);
+  color: var(--color-gray-400);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+  margin-top: var(--space-1);
+}

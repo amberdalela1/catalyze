@@ -1,0 +1,75 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn var(--transition-fast);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background-color: var(--color-white);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85dvh;
+  overflow-y: auto;
+  animation: slideUp var(--transition-base);
+  padding-bottom: var(--safe-area-bottom);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.handle {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-3) 0 var(--space-1);
+}
+
+.handleBar {
+  width: 36px;
+  height: 4px;
+  background-color: var(--color-gray-300);
+  border-radius: var(--radius-full);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--color-gray-500);
+  font-size: var(--font-size-xl);
+}
+
+.closeBtn:hover {
+  background-color: var(--color-gray-100);
+}
+
+.body {
+  padding: 0 var(--space-4) var(--space-4);
+}

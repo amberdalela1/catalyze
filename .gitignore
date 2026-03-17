@@ -1,0 +1,20 @@
+node_modules
+dist
+.env
+*.local
+ios
+android
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/tasks.json
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Server
+server/node_modules
+server/dist

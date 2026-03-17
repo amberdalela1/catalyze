@@ -1,0 +1,120 @@
+.page {
+  padding-bottom: var(--space-4);
+}
+
+.searchBar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--color-white);
+  padding: var(--space-4);
+  padding-top: calc(var(--safe-area-top) + var(--space-4));
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  padding-left: 38px;
+  font-size: var(--font-size-base);
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-full);
+  background-color: var(--color-gray-50);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary);
+  background-color: var(--color-white);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-gray-400);
+  pointer-events: none;
+  font-size: var(--font-size-base);
+  line-height: 1;
+  width: 20px;
+  text-align: center;
+}
+
+.searchWrapper {
+  position: relative;
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.categoryPill {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  border: 1.5px solid var(--color-gray-200);
+  color: var(--color-gray-600);
+  transition: all var(--transition-fast);
+}
+
+.categoryPill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.categoryActive {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+.categoryActive:hover {
+  color: #ffffff;
+}
+
+.results {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.orgItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.orgInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.orgName {
+  font-weight: var(--font-weight-semibold);
+}
+
+.orgCategory {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+}
+
+.orgLocation {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-400);
+}
+
+.emptySearch {
+  text-align: center;
+  padding: var(--space-12) var(--space-4);
+  color: var(--color-gray-400);
+}
