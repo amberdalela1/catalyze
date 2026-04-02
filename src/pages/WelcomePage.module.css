@@ -2,66 +2,121 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8);
-  background: linear-gradient(135deg, var(--color-primary) 0%, #1e40af 100%);
-  color: var(--color-white);
+  background-color: var(--color-gray-50);
+}
+
+.header {
+  background-color: var(--color-secondary);
+  padding: var(--space-4) var(--space-6);
+  padding-top: calc(var(--safe-area-top) + var(--space-4));
   text-align: center;
 }
 
-.logo {
-  font-size: var(--font-size-4xl);
+.headerText {
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
+  color: #ffffff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-6);
+}
+
+.logoCircle {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  border: 3px solid var(--color-primary);
+  background-color: var(--color-gray-100);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--space-8);
+}
+
+.logoIcon {
+  width: 120px;
+  height: 80px;
   margin-bottom: var(--space-2);
-  letter-spacing: -0.5px;
 }
 
-.slogan {
-  font-size: var(--font-size-lg);
-  opacity: 0.9;
-  margin-bottom: var(--space-12);
+.handshakeSvg {
+  width: 100%;
+  height: 100%;
+}
+
+.logoText {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: var(--space-1);
+}
+
+.logoName {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-gray-800);
+  letter-spacing: 3px;
+}
+
+.logoAccent {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
+  letter-spacing: 3px;
+}
+
+.logoTagline {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  letter-spacing: 1.5px;
   font-weight: var(--font-weight-medium);
-}
-
-.description {
-  font-size: var(--font-size-base);
-  opacity: 0.8;
-  max-width: 320px;
-  margin-bottom: var(--space-10);
-  line-height: 1.6;
 }
 
 .actions {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-3);
   width: 100%;
   max-width: 320px;
+  margin-top: auto;
 }
 
-.getStartedBtn {
-  background-color: var(--color-white);
-  color: var(--color-primary);
-  padding: var(--space-4) var(--space-8);
-  border-radius: var(--radius-lg);
+.actionLabel {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  transition: all var(--transition-fast);
+  color: var(--color-gray-800);
+  margin-top: var(--space-2);
+}
+
+.actionBtn {
+  width: 100%;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-full);
+  border: 2.5px solid var(--color-accent);
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-900);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
   min-height: 52px;
+  transition: all var(--transition-fast);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent-light);
 }
 
-.getStartedBtn:hover {
+.actionBtn:hover {
   background-color: var(--color-gray-100);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
 }
 
-.loginLink {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  padding: var(--space-3);
-}
-
-.loginLink:hover {
-  color: var(--color-white);
+.actionBtn:active {
+  transform: scale(0.97);
 }
