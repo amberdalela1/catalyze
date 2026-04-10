@@ -4,7 +4,7 @@
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
   padding-top: calc(var(--safe-area-top) + var(--space-3));
-  background-color: var(--color-secondary);
+  background-color: var(--color-primary-dark);
   border-bottom: none;
   min-height: var(--header-height);
   position: sticky;

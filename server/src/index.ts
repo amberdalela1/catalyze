@@ -11,6 +11,9 @@ import organizationRoutes from './routes/organizations';
 import postRoutes from './routes/posts';
 import partnershipRoutes from './routes/partnerships';
 import feedRoutes from './routes/feed';
+import favoriteRoutes from './routes/favorites';
+import messageRoutes from './routes/messages';
+import scrapeRoutes from './routes/scrape';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -39,6 +42,9 @@ app.use('/api/organizations', organizationRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/partnerships', partnershipRoutes);
 app.use('/api/feed', feedRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/scrape-contact', scrapeRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -52,10 +58,19 @@ async function start() {
     console.log('Database connected');
 
     if (process.env.NODE_ENV !== 'production') {
-      // sync() only creates tables that don't exist — never alters or drops existing ones.
-      // Use explicit migrations for schema changes to avoid data loss.
-      await sequelize.sync();
-      console.log('Models synced');
+      // Use FORCE_SYNC=true env var to explicitly reset the database when needed.
+      if (process.env.FORCE_SYNC === 'true') {
+        await sequelize.sync({ force: true });
+        console.log('Models force synced (data reset)');
+      } else {
+        // Try alter first; if SQLite FK constraints block it, fall back to plain sync
+        try {
+          await sequelize.sync({ alter: true });
+        } catch {
+          await sequelize.sync();
+        }
+        console.log('Models synced');
+      }
     }
   } catch (error) {
     console.warn('Database connection failed — running without DB:', (error as Error).message);

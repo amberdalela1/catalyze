@@ -8,6 +8,7 @@ import TextInput from '../components/ui/TextInput';
 import Button from '../components/ui/Button';
 import Card, { CardBody } from '../components/ui/Card';
 import Avatar from '../components/ui/Avatar';
+import Badge from '../components/ui/Badge';
 import { LoadingCenter } from '../components/ui/Loading';
 
 interface Organization {
@@ -19,6 +20,9 @@ interface Organization {
   city: string;
   state: string;
   website: string;
+  contactEmail: string;
+  contactPhone: string;
+  registrationNo: string;
   logoUrl?: string;
 }
 
@@ -30,9 +34,12 @@ const EMPTY_ORG: Organization = {
   city: '',
   state: '',
   website: '',
+  contactEmail: '',
+  contactPhone: '',
+  registrationNo: '',
 };
 
-const CATEGORIES = [
+const STANDARD_CATEGORIES = [
   'Education',
   'Health',
   'Environment',
@@ -42,8 +49,13 @@ const CATEGORIES = [
   'Housing',
   'Food Security',
   'Animal Welfare',
-  'Other',
 ];
+
+const CATEGORIES = [...STANDARD_CATEGORIES, 'Other'];
+
+function isStandardCategory(cat: string): boolean {
+  return STANDARD_CATEGORIES.includes(cat);
+}
 
 export default function MyOrgPage() {
   const navigate = useNavigate();
@@ -54,6 +66,8 @@ export default function MyOrgPage() {
   const [saving, setSaving] = useState(false);
   const [isNew, setIsNew] = useState(true);
   const [message, setMessage] = useState('');
+  const [scraping, setScraping] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -72,6 +86,35 @@ export default function MyOrgPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const scrapeContact = async (url: string) => {
+    if (!url || scraping) return;
+    setScraping(true);
+    try {
+      const data = await api.get<{ contactEmail: string | null; contactPhone: string | null }>(
+        `/scrape-contact?url=${encodeURIComponent(url)}`
+      );
+      setOrg(prev => ({
+        ...prev,
+        contactEmail: data.contactEmail || prev.contactEmail,
+        contactPhone: data.contactPhone || prev.contactPhone,
+      }));
+    } catch { /* ignore */ }
+    finally { setScraping(false); }
+  };
+
+  const handleWebsiteBlur = () => {
+    scrapeContact(org.website.trim());
+  };
+
+  const handleWebsitePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text').trim();
+    if (pasted && /^https?:\/\//i.test(pasted)) {
+      // Update the value immediately since onChange may fire after paste
+      setOrg(prev => ({ ...prev, website: pasted }));
+      setTimeout(() => scrapeContact(pasted), 100);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -81,10 +124,12 @@ export default function MyOrgPage() {
         const created = await api.post<Organization>('/organizations', org);
         setOrg(created);
         setIsNew(false);
+        setEditing(false);
         setMessage('Organization created successfully!');
       } else {
         const updated = await api.put<Organization>(`/organizations/${org.id}`, org);
         setOrg(updated);
+        setEditing(false);
         setMessage('Organization updated successfully!');
       }
     } catch (err) {
@@ -101,13 +146,94 @@ export default function MyOrgPage() {
       <Header title={isNew ? 'Create Organization' : 'My Organization'} />
 
       <div style={{ padding: 'var(--space-4)' }}>
-        {!isNew && (
-          <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-            <Avatar name={org.name || 'O'} src={org.logoUrl} size="xl" />
-          </div>
+        {/* Profile View (read-only) */}
+        {!isNew && !editing && (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
+              <Avatar name={org.name || 'O'} src={org.logoUrl} size="xl" />
+              <h2 style={{ marginTop: 'var(--space-3)', fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)' }}>
+                {org.name}
+              </h2>
+              <Badge variant={isStandardCategory(org.category) ? 'primary' : 'neutral'}>
+                {!isStandardCategory(org.category) && '✦ '}{org.category}
+              </Badge>
+              {org.city && (
+                <p style={{ color: 'var(--color-gray-500)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)' }}>
+                  📍 {org.city}{org.state ? `, ${org.state}` : ''}
+                </p>
+              )}
+            </div>
+
+            <Card>
+              <CardBody>
+                <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Mission</h3>
+                <p style={{ color: 'var(--color-gray-600)', lineHeight: '1.6' }}>{org.mission}</p>
+              </CardBody>
+            </Card>
+
+            {org.description && (
+              <Card style={{ marginTop: 'var(--space-3)' }}>
+                <CardBody>
+                  <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>About</h3>
+                  <p style={{ color: 'var(--color-gray-600)', lineHeight: '1.6' }}>{org.description}</p>
+                </CardBody>
+              </Card>
+            )}
+
+            {org.website && (
+              <Card style={{ marginTop: 'var(--space-3)' }}>
+                <CardBody>
+                  <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Website</h3>
+                  <a href={org.website} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>
+                    {org.website}
+                  </a>
+                </CardBody>
+              </Card>
+            )}
+
+            {(org.contactEmail || org.contactPhone) && (
+              <Card style={{ marginTop: 'var(--space-3)' }}>
+                <CardBody>
+                  <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Contact</h3>
+                  {org.contactEmail && (
+                    <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-1)' }}>
+                      ✉️ {org.contactEmail}
+                    </p>
+                  )}
+                  {org.contactPhone && (
+                    <p style={{ color: 'var(--color-gray-600)' }}>
+                      📞 {org.contactPhone}
+                    </p>
+                  )}
+                </CardBody>
+              </Card>
+            )}
+
+            {org.registrationNo && (
+              <Card style={{ marginTop: 'var(--space-3)' }}>
+                <CardBody>
+                  <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Registration No.</h3>
+                  <p style={{ color: 'var(--color-gray-600)' }}>🏛️ {org.registrationNo}</p>
+                </CardBody>
+              </Card>
+            )}
+
+            <Button fullWidth onClick={() => setEditing(true)} style={{ marginTop: 'var(--space-4)' }}>
+              ✏️ Edit Organization
+            </Button>
+          </>
         )}
 
-        <Card>
+        {/* Edit Form (shown for new orgs or when editing) */}
+        {(isNew || editing) && (
+          <>
+            {!isNew && (
+              <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+                <Avatar name={org.name || 'O'} src={org.logoUrl} size="xl" />
+              </div>
+            )}
+
+            <Card>
           <CardBody>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <TextInput
@@ -123,9 +249,12 @@ export default function MyOrgPage() {
                   Category
                 </label>
                 <select
-                  value={org.category}
-                  onChange={(e) => setOrg({ ...org, category: e.target.value })}
-                  required
+                  value={isStandardCategory(org.category) ? org.category : (org.category !== '' ? 'Other' : '')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setOrg({ ...org, category: val === 'Other' ? '' : val });
+                  }}
+                  required={!org.category}
                   style={{
                     width: '100%',
                     padding: 'var(--space-3) var(--space-4)',
@@ -143,6 +272,15 @@ export default function MyOrgPage() {
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
+                {!isStandardCategory(org.category) && (
+                  <TextInput
+                    placeholder="Enter your custom category"
+                    value={org.category}
+                    onChange={(e) => setOrg({ ...org, category: e.target.value })}
+                    required
+                    style={{ marginTop: 'var(--space-2)' }}
+                  />
+                )}
               </div>
 
               <TextInput
@@ -198,6 +336,37 @@ export default function MyOrgPage() {
                 placeholder="https://yourorg.org"
                 value={org.website}
                 onChange={(e) => setOrg({ ...org, website: e.target.value })}
+                onBlur={handleWebsiteBlur}
+                onPaste={handleWebsitePaste}
+              />
+
+              {scraping && (
+                <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-500)' }}>
+                  🔍 Looking up contact info from website...
+                </p>
+              )}
+
+              <TextInput
+                label="Contact Email"
+                type="email"
+                placeholder="contact@yourorg.org"
+                value={org.contactEmail}
+                onChange={(e) => setOrg({ ...org, contactEmail: e.target.value })}
+              />
+
+              <TextInput
+                label="Contact Phone"
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={org.contactPhone}
+                onChange={(e) => setOrg({ ...org, contactPhone: e.target.value })}
+              />
+
+              <TextInput
+                label="Registration No."
+                placeholder="e.g. 501(c)(3)-1234567"
+                value={org.registrationNo}
+                onChange={(e) => setOrg({ ...org, registrationNo: e.target.value })}
               />
 
               {message && (
@@ -212,9 +381,16 @@ export default function MyOrgPage() {
               <Button type="submit" fullWidth disabled={saving}>
                 {saving ? 'Saving...' : isNew ? 'Create Organization' : 'Save Changes'}
               </Button>
+              {!isNew && (
+                <Button type="button" variant="outline" fullWidth onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              )}
             </form>
           </CardBody>
         </Card>
+          </>
+        )}
 
         <div style={{ marginTop: 'var(--space-6)', padding: '0 var(--space-4) var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           <button

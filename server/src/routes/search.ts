@@ -21,7 +21,15 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
     }
 
     if (category && typeof category === 'string') {
-      where.category = category;
+      if (category === 'Other') {
+        const standardCategories = [
+          'Education', 'Health', 'Environment', 'Community', 'Arts & Culture',
+          'Youth', 'Housing', 'Food Security', 'Animal Welfare',
+        ];
+        where.category = { [Op.notIn]: standardCategories };
+      } else {
+        where.category = category;
+      }
     }
 
     const orgs = await Organization.findAll({

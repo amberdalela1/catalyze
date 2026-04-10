@@ -72,7 +72,15 @@ router.get('/search', authenticate, async (req: AuthRequest, res: Response): Pro
     }
 
     if (category && typeof category === 'string') {
-      where.category = category;
+      if (category === 'Other') {
+        const standardCategories = [
+          'Education', 'Health', 'Environment', 'Community', 'Arts & Culture',
+          'Youth', 'Housing', 'Food Security', 'Animal Welfare',
+        ];
+        where.category = { [Op.notIn]: standardCategories };
+      } else {
+        where.category = category;
+      }
     }
 
     const orgs = await Organization.findAll({
@@ -119,12 +127,13 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
     }
 
     // Check partnership status
-    const { Partnership } = await import('../models');
+    const { Partnership, Favorite } = await import('../models');
     const viewerOrg = await Organization.findOne({ where: { ownerId: req.userId } });
 
+    const isOwner = viewerOrg ? viewerOrg.id === org.id : false;
     let partnershipStatus: 'none' | 'pending' | 'accepted' = 'none';
     let partnershipId: number | null = null;
-    if (viewerOrg && viewerOrg.id !== org.id) {
+    if (viewerOrg && !isOwner) {
       const partnership = await Partnership.findOne({
         where: {
           [Op.or]: [
@@ -139,7 +148,11 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
       }
     }
 
-    res.json({ ...org.toJSON(), partnershipStatus, partnershipId });
+    // Check favorite status
+    const favorite = await Favorite.findOne({ where: { userId: req.userId, orgId } });
+    const isFavorited = !!favorite;
+
+    res.json({ ...org.toJSON(), isOwner, isFavorited, partnershipStatus, partnershipId });
   } catch (error) {
     console.error('Get org error:', error);
     res.status(500).json({ message: 'Internal server error' });

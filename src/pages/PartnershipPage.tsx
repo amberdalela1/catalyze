@@ -22,17 +22,36 @@ interface Partnership {
   direction: 'incoming' | 'outgoing';
 }
 
+interface FavoriteOrg {
+  id: number;
+  orgId: number;
+  createdAt: string;
+  organization: {
+    id: number;
+    name: string;
+    category: string;
+    city?: string;
+    state?: string;
+    logoUrl?: string;
+    mission: string;
+  };
+}
+
 export default function PartnershipPage() {
   const navigate = useNavigate();
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteOrg[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'all' | 'pending' | 'connected'>('all');
+  const [tab, setTab] = useState<'all' | 'pending' | 'connected' | 'favorites'>('all');
 
   useEffect(() => {
-    api.get<Partnership[]>('/partnerships')
-      .then(setPartnerships)
-      .catch(() => setPartnerships([]))
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.get<Partnership[]>('/partnerships').catch(() => [] as Partnership[]),
+      api.get<FavoriteOrg[]>('/favorites').catch(() => [] as FavoriteOrg[]),
+    ]).then(([p, f]) => {
+      setPartnerships(p);
+      setFavorites(f);
+    }).finally(() => setLoading(false));
   }, []);
 
   const handleAction = async (id: number, action: 'accepted' | 'declined') => {
@@ -68,7 +87,7 @@ export default function PartnershipPage() {
       <Header title="Partnerships" />
 
       <div style={{ display: 'flex', gap: 'var(--space-2)', padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-gray-200)' }}>
-        {(['all', 'pending', 'connected'] as const).map((t) => (
+        {(['all', 'pending', 'connected', 'favorites'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -89,7 +108,47 @@ export default function PartnershipPage() {
       </div>
 
       <div style={{ padding: 'var(--space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        {filtered.length === 0 ? (
+        {tab === 'favorites' ? (
+          favorites.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-gray-400)' }}>
+              <p style={{ fontSize: '48px', marginBottom: 'var(--space-4)' }}>☆</p>
+              <p>No favorites yet. Tap the star on an org's profile to save it.</p>
+            </div>
+          ) : (
+            favorites.map((fav) => (
+              <Card key={fav.id}>
+                <CardBody>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                    <Avatar
+                      name={fav.organization.name}
+                      src={fav.organization.logoUrl}
+                      size="lg"
+                    />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontWeight: 'var(--font-weight-semibold)' }}>
+                        {fav.organization.name}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-1)' }}>
+                        <Badge>{fav.organization.category}</Badge>
+                        {fav.organization.city && (
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-400)' }}>
+                            📍 {fav.organization.city}{fav.organization.state ? `, ${fav.organization.state}` : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/org/${fav.organization.id}`)}
+                      style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}
+                    >
+                      View
+                    </button>
+                  </div>
+                </CardBody>
+              </Card>
+            ))
+          )
+        ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-gray-400)' }}>
             <p style={{ fontSize: '48px', marginBottom: 'var(--space-4)' }}>🤝</p>
             <p>No partnerships yet. Discover organizations to connect with!</p>

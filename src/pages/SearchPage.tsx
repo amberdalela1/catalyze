@@ -3,21 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import Card from '../components/ui/Card';
 import Avatar from '../components/ui/Avatar';
+import Badge from '../components/ui/Badge';
 import { Spinner } from '../components/ui/Loading';
 import styles from './SearchPage.module.css';
 
-const CATEGORIES = [
-  'All',
-  'Education',
-  'Health',
-  'Environment',
-  'Community',
-  'Arts & Culture',
-  'Youth',
-  'Housing',
-  'Food Security',
-  'Animal Welfare',
+const CATEGORIES: { name: string; icon: string }[] = [
+  { name: 'Education', icon: '📚' },
+  { name: 'Health', icon: '🏥' },
+  { name: 'Environment', icon: '🌿' },
+  { name: 'Community', icon: '🏘️' },
+  { name: 'Arts & Culture', icon: '🎨' },
+  { name: 'Youth', icon: '👦' },
+  { name: 'Housing', icon: '🏠' },
+  { name: 'Food Security', icon: '🍎' },
+  { name: 'Animal Welfare', icon: '🐾' },
+  { name: 'Other', icon: '✦' },
 ];
+
+const STANDARD_CATEGORIES = CATEGORIES.map(c => c.name);
 
 interface Organization {
   id: number;
@@ -35,6 +38,7 @@ export default function SearchPage() {
   const [category, setCategory] = useState('All');
   const [results, setResults] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const search = useCallback(async () => {
     setLoading(true);
@@ -56,6 +60,11 @@ export default function SearchPage() {
     return () => clearTimeout(timeout);
   }, [search]);
 
+  const handleCategorySelect = (cat: string) => {
+    setCategory(cat);
+    setFilterOpen(false);
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.searchBar}>
@@ -70,16 +79,47 @@ export default function SearchPage() {
         </div>
       </div>
 
-      <div className={styles.categories}>
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            className={`${styles.categoryPill} ${category === cat ? styles.categoryActive : ''}`}
-            onClick={() => setCategory(cat)}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* Filter accordion */}
+      <div className={styles.filterSection}>
+        <button
+          className={styles.filterToggle}
+          onClick={() => setFilterOpen(!filterOpen)}
+        >
+          <span className={styles.filterLabel}>
+            {category === 'All' ? '🏷️ All Categories' : `${CATEGORIES.find(c => c.name === category)?.icon || '🏷️'} ${category}`}
+          </span>
+          <span className={`${styles.filterArrow} ${filterOpen ? styles.filterArrowOpen : ''}`}>▾</span>
+        </button>
+
+        {filterOpen && (
+          <div className={styles.filterPanel}>
+            <button
+              className={`${styles.filterItem} ${category === 'All' ? styles.filterItemActive : ''}`}
+              onClick={() => handleCategorySelect('All')}
+            >
+              <span className={styles.filterItemIcon}>🏷️</span>
+              <span className={styles.filterItemName}>All Categories</span>
+              {category === 'All' && <span className={styles.filterCheck}>✓</span>}
+            </button>
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.name}
+                className={`${styles.filterItem} ${category === cat.name ? styles.filterItemActive : ''}`}
+                onClick={() => handleCategorySelect(cat.name)}
+              >
+                <span className={styles.filterItemIcon}>{cat.icon}</span>
+                <span className={styles.filterItemName}>{cat.name}</span>
+                {category === cat.name && <span className={styles.filterCheck}>✓</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.resultsHeader}>
+        <span className={styles.resultsCount}>
+          {loading ? 'Searching...' : `${results.length} organization${results.length !== 1 ? 's' : ''}`}
+        </span>
       </div>
 
       <div className={styles.results}>
@@ -98,7 +138,9 @@ export default function SearchPage() {
                 <Avatar name={org.name} src={org.logoUrl} size="lg" />
                 <div className={styles.orgInfo}>
                   <p className={styles.orgName}>{org.name}</p>
-                  <p className={styles.orgCategory}>{org.category}</p>
+                  <Badge variant={STANDARD_CATEGORIES.includes(org.category) ? 'primary' : 'neutral'} className={styles.orgBadge}>
+                    {!STANDARD_CATEGORIES.includes(org.category) && '✦ '}{org.category}
+                  </Badge>
                   {org.city && (
                     <p className={styles.orgLocation}>
                       📍 {org.city}{org.state ? `, ${org.state}` : ''}

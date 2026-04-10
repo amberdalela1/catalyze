@@ -72,6 +72,9 @@ export class Organization extends Model {
   declare latitude: number | null;
   declare longitude: number | null;
   declare website: string | null;
+  declare contactEmail: string | null;
+  declare contactPhone: string | null;
+  declare registrationNo: string | null;
   declare logoUrl: string | null;
   declare ownerId: number;
   declare createdAt: Date;
@@ -119,6 +122,18 @@ Organization.init(
     },
     website: {
       type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    contactEmail: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    contactPhone: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    registrationNo: {
+      type: DataTypes.STRING(100),
       allowNull: true,
     },
     logoUrl: {
@@ -350,6 +365,85 @@ PhoneOTP.init(
   }
 );
 
+export class Favorite extends Model {
+  declare id: number;
+  declare userId: number;
+  declare orgId: number;
+  declare createdAt: Date;
+}
+
+Favorite.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    orgId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'favorites',
+    timestamps: true,
+    updatedAt: false,
+    indexes: [
+      { unique: true, fields: ['userId', 'orgId'] },
+    ],
+  }
+);
+
+export class Message extends Model {
+  declare id: number;
+  declare senderOrgId: number;
+  declare receiverOrgId: number;
+  declare content: string;
+  declare readAt: Date | null;
+  declare createdAt: Date;
+}
+
+Message.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    senderOrgId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    receiverOrgId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    readAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'messages',
+    timestamps: true,
+    updatedAt: false,
+    indexes: [
+      { fields: ['senderOrgId', 'receiverOrgId'] },
+      { fields: ['receiverOrgId'] },
+    ],
+  }
+);
+
 // Associations
 User.hasOne(Organization, { foreignKey: 'ownerId', as: 'organization' });
 Organization.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
@@ -373,3 +467,13 @@ Partnership.belongsTo(Organization, { foreignKey: 'targetId', as: 'target' });
 Organization.hasMany(FeedRecommendation, { foreignKey: 'orgId' });
 FeedRecommendation.belongsTo(Organization, { foreignKey: 'orgId', as: 'organization' });
 FeedRecommendation.belongsTo(Organization, { foreignKey: 'recommendedOrgId', as: 'recommendedOrg' });
+
+User.hasMany(Favorite, { foreignKey: 'userId', as: 'favorites' });
+Favorite.belongsTo(User, { foreignKey: 'userId' });
+Organization.hasMany(Favorite, { foreignKey: 'orgId' });
+Favorite.belongsTo(Organization, { foreignKey: 'orgId', as: 'organization' });
+
+Organization.hasMany(Message, { foreignKey: 'senderOrgId', as: 'sentMessages' });
+Organization.hasMany(Message, { foreignKey: 'receiverOrgId', as: 'receivedMessages' });
+Message.belongsTo(Organization, { foreignKey: 'senderOrgId', as: 'senderOrg' });
+Message.belongsTo(Organization, { foreignKey: 'receiverOrgId', as: 'receiverOrg' });

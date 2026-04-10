@@ -17,10 +17,20 @@ interface OrgDetail {
   city?: string;
   state?: string;
   website?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  registrationNo?: string;
   logoUrl?: string;
+  isOwner?: boolean;
+  isFavorited?: boolean;
   partnershipStatus?: 'none' | 'pending' | 'accepted';
   partnershipId?: number;
 }
+
+const STANDARD_CATEGORIES = [
+  'Education', 'Health', 'Environment', 'Community', 'Arts & Culture',
+  'Youth', 'Housing', 'Food Security', 'Animal Welfare',
+];
 
 export default function OrgProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -29,10 +39,11 @@ export default function OrgProfilePage() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [favorited, setFavorited] = useState(false);
 
   useEffect(() => {
     api.get<OrgDetail>(`/organizations/${id}`)
-      .then(setOrg)
+      .then((data) => { setOrg(data); setFavorited(!!data.isFavorited); })
       .catch(() => navigate('/feed', { replace: true }))
       .finally(() => setLoading(false));
   }, [id, navigate]);
@@ -48,19 +59,43 @@ export default function OrgProfilePage() {
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (!org) return;
+    try {
+      if (favorited) {
+        await api.delete(`/favorites/${org.id}`);
+      } else {
+        await api.post(`/favorites/${org.id}`, {});
+      }
+      setFavorited(!favorited);
+    } catch { /* ignore */ }
+  };
+
   if (loading) return <LoadingCenter size="lg" />;
   if (!org) return null;
 
   return (
     <div>
-      <Header title={org.name} showBack />
+      <Header title={org.name} showBack
+        actions={
+          <button
+            onClick={handleToggleFavorite}
+            style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: 'var(--space-1)' }}
+            aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {favorited ? '⭐' : '☆'}
+          </button>
+        }
+      />
 
       <div style={{ textAlign: 'center', padding: 'var(--space-8) var(--space-4) var(--space-4)' }}>
         <Avatar name={org.name} src={org.logoUrl} size="xl" />
         <h2 style={{ marginTop: 'var(--space-3)', fontSize: 'var(--font-size-2xl)' }}>
           {org.name}
         </h2>
-        <Badge>{org.category}</Badge>
+        <Badge variant={STANDARD_CATEGORIES.includes(org.category) ? 'primary' : 'neutral'}>
+          {!STANDARD_CATEGORIES.includes(org.category) && '✦ '}{org.category}
+        </Badge>
         {org.city && (
           <p style={{ color: 'var(--color-gray-500)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)' }}>
             📍 {org.city}{org.state ? `, ${org.state}` : ''}
@@ -69,7 +104,7 @@ export default function OrgProfilePage() {
       </div>
 
       <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
-        {org.partnershipStatus === 'none' && (
+        {!org.isOwner && org.partnershipStatus === 'none' && (
           <Button fullWidth onClick={handleConnect} disabled={connecting}>
             {connecting ? 'Sending...' : '🤝 Connect'}
           </Button>
@@ -96,6 +131,16 @@ export default function OrgProfilePage() {
         {org.partnershipStatus === 'accepted' && (
           <Button fullWidth variant="secondary" disabled>
             ✅ Connected
+          </Button>
+        )}
+        {!org.isOwner && (
+          <Button
+            fullWidth
+            variant="outline"
+            onClick={() => navigate(`/messages/${org.id}`)}
+            style={{ marginTop: 'var(--space-2)' }}
+          >
+            💬 Message
           </Button>
         )}
       </div>
@@ -139,6 +184,41 @@ export default function OrgProfilePage() {
               >
                 {org.website}
               </a>
+            </CardBody>
+          </Card>
+        )}
+
+        {(org.contactEmail || org.contactPhone) && (
+          <Card style={{ marginTop: 'var(--space-3)' }}>
+            <CardBody>
+              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>
+                Contact Us
+              </h3>
+              {org.contactEmail && (
+                <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-1)' }}>
+                  ✉️{' '}
+                  <a href={`mailto:${org.contactEmail}`} style={{ color: 'var(--color-primary)' }}>
+                    {org.contactEmail}
+                  </a>
+                </p>
+              )}
+              {org.contactPhone && (
+                <p style={{ color: 'var(--color-gray-600)' }}>
+                  📞{' '}
+                  <a href={`tel:${org.contactPhone}`} style={{ color: 'var(--color-primary)' }}>
+                    {org.contactPhone}
+                  </a>
+                </p>
+              )}
+            </CardBody>
+          </Card>
+        )}
+
+        {org.registrationNo && (
+          <Card style={{ marginTop: 'var(--space-3)' }}>
+            <CardBody>
+              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Registration No.</h3>
+              <p style={{ color: 'var(--color-gray-600)' }}>🏛️ {org.registrationNo}</p>
             </CardBody>
           </Card>
         )}

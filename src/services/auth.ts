@@ -1,4 +1,4 @@
-import { api, setAuthToken, setRefreshToken, clearTokens } from './api';
+import { api, setAuthToken, setRefreshToken, clearTokens, setRememberMe } from './api';
 
 export interface User {
   id: number;
@@ -15,7 +15,8 @@ interface AuthResponse {
   refreshToken: string;
 }
 
-export async function loginWithEmail(email: string, password: string): Promise<AuthResponse> {
+export async function loginWithEmail(email: string, password: string, rememberMe = false): Promise<AuthResponse> {
+  setRememberMe(rememberMe);
   const data = await api.post<AuthResponse>('/auth/login', { email, password });
   await setAuthToken(data.accessToken);
   await setRefreshToken(data.refreshToken);

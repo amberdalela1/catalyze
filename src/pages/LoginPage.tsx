@@ -12,6 +12,7 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +21,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const data = await loginWithEmail(email, password);
+      const data = await loginWithEmail(email, password, rememberMe);
       login(data.user);
       navigate('/feed', { replace: true });
     } catch (err) {
@@ -70,6 +71,15 @@ export default function LoginPage() {
           autoComplete="current-password"
         />
         {error && <p style={{ color: 'var(--color-error)', fontSize: 'var(--font-size-sm)' }}>{error}</p>}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-600)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            style={{ width: 18, height: 18, accentColor: 'var(--color-primary)' }}
+          />
+          Remember me
+        </label>
         <Button type="submit" fullWidth disabled={loading}>
           {loading ? 'Logging in...' : 'Log In'}
         </Button>

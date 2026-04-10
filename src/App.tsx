@@ -9,6 +9,8 @@ import OrgProfilePage from './pages/OrgProfilePage';
 import MyOrgPage from './pages/MyOrgPage';
 import PartnershipPage from './pages/PartnershipPage';
 import CreatePostPage from './pages/CreatePostPage';
+import InboxPage from './pages/InboxPage';
+import ConversationPage from './pages/ConversationPage';
 import AppLayout from './components/layout/AppLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -37,12 +39,14 @@ export default function App() {
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/feed" element={<FeedPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/inbox" element={<InboxPage />} />
         <Route path="/partnerships" element={<PartnershipPage />} />
         <Route path="/my-org" element={<MyOrgPage />} />
       </Route>
 
       {/* Protected standalone routes */}
       <Route path="/org/:id" element={<ProtectedRoute><OrgProfilePage /></ProtectedRoute>} />
+      <Route path="/messages/:orgId" element={<ProtectedRoute><ConversationPage /></ProtectedRoute>} />
       <Route path="/create-post" element={<ProtectedRoute><CreatePostPage /></ProtectedRoute>} />
 
       {/* Default redirect */}

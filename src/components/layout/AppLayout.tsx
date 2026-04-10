@@ -4,6 +4,7 @@ import styles from './AppLayout.module.css';
 const tabs = [
   { to: '/feed', label: 'Feed', icon: '🏠' },
   { to: '/search', label: 'Discover', icon: '🔍' },
+  { to: '/inbox', label: 'Messages', icon: '✉️' },
   { to: '/partnerships', label: 'Partners', icon: '🤝' },
   { to: '/my-org', label: 'My Org', icon: '👤' },
 ];
