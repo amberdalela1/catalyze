@@ -6,6 +6,8 @@ import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import Card, { CardBody } from '../components/ui/Card';
 import { LoadingCenter } from '../components/ui/Loading';
+import { StarIcon, LocationIcon } from '../components/ui/Icons';
+import styles from './FavoritesPage.module.css';
 
 interface FavoriteOrg {
   id: number;
@@ -48,7 +50,7 @@ export default function FavoritesPage() {
       <div style={{ padding: 'var(--space-4)' }}>
         {favorites.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-12) var(--space-4)', color: 'var(--color-gray-500)' }}>
-            <p style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-2)' }}>☆</p>
+            <p style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-2)' }}><StarIcon size={32} /></p>
             <p style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-1)' }}>
               No favorites yet
             </p>
@@ -77,8 +79,8 @@ export default function FavoritesPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                       <Badge>{fav.organization.category}</Badge>
                       {fav.organization.city && (
-                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-500)' }}>
-                          📍 {fav.organization.city}{fav.organization.state ? `, ${fav.organization.state}` : ''}
+                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-500)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                          <LocationIcon size={14} /> {fav.organization.city}{fav.organization.state ? `, ${fav.organization.state}` : ''}
                         </span>
                       )}
                     </div>
@@ -94,11 +96,11 @@ export default function FavoritesPage() {
                     </p>
                   </div>
                   <button
+                    className={styles.favoriteBtn}
                     onClick={(e) => { e.stopPropagation(); handleRemove(fav.orgId); }}
-                    style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', padding: 'var(--space-1)' }}
                     aria-label="Remove from favorites"
                   >
-                    ⭐
+                    <StarIcon filled size={20} />
                   </button>
                 </div>
               </CardBody>

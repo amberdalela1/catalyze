@@ -5,11 +5,13 @@ import Header from '../components/ui/Header';
 import TextInput from '../components/ui/TextInput';
 import Button from '../components/ui/Button';
 import Card, { CardBody } from '../components/ui/Card';
+import { MediaUploader } from '../components/ui/MediaCollage';
+import { LightbulbIcon, BookIcon, MegaphoneIcon } from '../components/ui/Icons';
 
 const POST_TYPES = [
-  { value: 'tip', label: '💡 Tip', description: 'Share a helpful tip' },
-  { value: 'experience', label: '📖 Experience', description: 'Share a story or lesson learned' },
-  { value: 'announcement', label: '📢 Announcement', description: 'Announce something new' },
+  { value: 'tip', label: 'Tip', icon: <LightbulbIcon size={16} />, description: 'Share a helpful tip' },
+  { value: 'experience', label: 'Experience', icon: <BookIcon size={16} />, description: 'Share a story or lesson learned' },
+  { value: 'announcement', label: 'Announcement', icon: <MegaphoneIcon size={16} />, description: 'Announce something new' },
 ];
 
 export default function CreatePostPage() {
@@ -19,13 +21,24 @@ export default function CreatePostPage() {
   const [type, setType] = useState('tip');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await api.post('/posts', { title, content, type });
+      const post = await api.post<{ id: number; orgId: number }>('/posts', { title, content, type });
+
+      // Upload media if any
+      if (mediaFiles.length > 0) {
+        const formData = new FormData();
+        formData.append('orgId', String(post.orgId));
+        formData.append('postId', String(post.id));
+        mediaFiles.forEach((f) => formData.append('files', f));
+        await api.upload('/media/upload', formData);
+      }
+
       navigate('/feed', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create post');
@@ -64,7 +77,7 @@ export default function CreatePostPage() {
                         color: type === pt.value ? 'var(--color-primary)' : 'var(--color-gray-600)',
                       }}
                     >
-                      {pt.label}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{pt.icon} {pt.label}</span>
                     </button>
                   ))}
                 </div>
@@ -101,6 +114,12 @@ export default function CreatePostPage() {
                   }}
                 />
               </div>
+
+              <MediaUploader
+                files={mediaFiles}
+                onFilesChange={setMediaFiles}
+                label="Photos & Videos"
+              />
 
               {error && (
                 <p style={{ color: 'var(--color-error)', fontSize: 'var(--font-size-sm)' }}>{error}</p>

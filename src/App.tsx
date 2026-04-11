@@ -11,6 +11,7 @@ import PartnershipPage from './pages/PartnershipPage';
 import CreatePostPage from './pages/CreatePostPage';
 import InboxPage from './pages/InboxPage';
 import ConversationPage from './pages/ConversationPage';
+import AdminPage from './pages/AdminPage';
 import AppLayout from './components/layout/AppLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/inbox" element={<InboxPage />} />
         <Route path="/partnerships" element={<PartnershipPage />} />
         <Route path="/my-org" element={<MyOrgPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
 
       {/* Protected standalone routes */}

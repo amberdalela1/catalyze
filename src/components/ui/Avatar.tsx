@@ -5,9 +5,10 @@ interface AvatarProps {
   name: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  onClick?: () => void;
 }
 
-export default function Avatar({ src, name, size = 'md', className = '' }: AvatarProps) {
+export default function Avatar({ src, name, size = 'md', className = '', onClick }: AvatarProps) {
   const initials = name
     .split(' ')
     .map((part) => part[0])
@@ -16,7 +17,7 @@ export default function Avatar({ src, name, size = 'md', className = '' }: Avata
     .slice(0, 2);
 
   return (
-    <div className={`${styles.avatar} ${styles[size]} ${className}`}>
+    <div className={`${styles.avatar} ${styles[size]} ${className}`} onClick={onClick} style={onClick ? { cursor: 'pointer' } : undefined}>
       {src ? <img src={src} alt={name} /> : initials}
     </div>
   );

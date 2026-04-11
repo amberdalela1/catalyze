@@ -6,6 +6,7 @@ export interface User {
   name: string;
   phone?: string;
   avatarUrl?: string;
+  role?: 'user' | 'admin';
   organizationId?: number;
 }
 
@@ -17,7 +18,7 @@ interface AuthResponse {
 
 export async function loginWithEmail(email: string, password: string, rememberMe = false): Promise<AuthResponse> {
   setRememberMe(rememberMe);
-  const data = await api.post<AuthResponse>('/auth/login', { email, password });
+  const data = await api.post<AuthResponse>('/auth/login', { email, password, rememberMe });
   await setAuthToken(data.accessToken);
   await setRefreshToken(data.refreshToken);
   return data;

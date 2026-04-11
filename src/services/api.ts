@@ -69,6 +69,49 @@ export async function clearTokens(): Promise<void> {
   }
 }
 
+async function getRefreshToken(): Promise<string | null> {
+  const { isNative } = await import('../utils/platform');
+  if (isNative()) {
+    const { Preferences } = await import('@capacitor/preferences');
+    const { value } = await Preferences.get({ key: 'refresh_token' });
+    return value;
+  }
+  return localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token');
+}
+
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  // Deduplicate concurrent refresh attempts
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) return false;
+
+      const response = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      await setAuthToken(data.accessToken);
+      await setRefreshToken(data.refreshToken);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 export async function apiRequest<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const token = await getAuthToken();
   const headers: Record<string, string> = {
@@ -86,6 +129,28 @@ export async function apiRequest<T>(endpoint: string, options: RequestOptions = 
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
+  // On 401, try refreshing the token and retry once
+  if (response.status === 401 && !endpoint.includes('/auth/refresh') && !endpoint.includes('/auth/login')) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      const newToken = await getAuthToken();
+      if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
+
+      const retryResponse = await fetch(`${API_URL}${endpoint}`, {
+        method: options.method || 'GET',
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+
+      if (!retryResponse.ok) {
+        const error = await retryResponse.json().catch(() => ({ message: 'Request failed' }));
+        throw new Error(error.message || `HTTP ${retryResponse.status}`);
+      }
+
+      return retryResponse.json();
+    }
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Request failed' }));
     throw new Error(error.message || `HTTP ${response.status}`);
@@ -99,4 +164,35 @@ export const api = {
   post: <T>(endpoint: string, body: unknown) => apiRequest<T>(endpoint, { method: 'POST', body }),
   put: <T>(endpoint: string, body: unknown) => apiRequest<T>(endpoint, { method: 'PUT', body }),
   delete: <T>(endpoint: string) => apiRequest<T>(endpoint, { method: 'DELETE' }),
+  upload: async <T>(endpoint: string, formData: FormData): Promise<T> => {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (response.status === 401) {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        const newToken = await getAuthToken();
+        if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
+        response = await fetch(`${API_URL}${endpoint}`, {
+          method: 'POST',
+          headers,
+          body: formData,
+        });
+      }
+    }
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  },
 };

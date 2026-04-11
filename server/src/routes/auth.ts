@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { body } from 'express-validator';
 import { User, PhoneOTP } from '../models';
 import {
@@ -36,11 +37,11 @@ router.post(
       const passwordHash = await bcrypt.hash(password, 12);
       const user = await User.create({ name, email, passwordHash });
 
-      const accessToken = generateAccessToken(user.id);
-      const refreshToken = generateRefreshToken(user.id);
+      const accessToken = generateAccessToken(user.id, false, user.role);
+      const refreshToken = generateRefreshToken(user.id, false, user.role);
 
       res.status(201).json({
-        user: { id: user.id, name: user.name, email: user.email },
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
         accessToken,
         refreshToken,
       });
@@ -61,7 +62,7 @@ router.post(
   ],
   async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-      const { email, password } = req.body;
+      const { email, password, rememberMe } = req.body;
 
       const user = await User.findOne({ where: { email } });
       if (!user || !user.passwordHash) {
@@ -75,11 +76,11 @@ router.post(
         return;
       }
 
-      const accessToken = generateAccessToken(user.id);
-      const refreshToken = generateRefreshToken(user.id);
+      const accessToken = generateAccessToken(user.id, !!rememberMe, user.role);
+      const refreshToken = generateRefreshToken(user.id, !!rememberMe, user.role);
 
       res.json({
-        user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+        user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl, role: user.role },
         accessToken,
         refreshToken,
       });
@@ -123,11 +124,11 @@ router.post('/google', async (req: AuthRequest, res: Response): Promise<void> =>
       }
     }
 
-    const accessToken = generateAccessToken(user.id);
-    const refreshToken = generateRefreshToken(user.id);
+    const accessToken = generateAccessToken(user.id, false, user.role);
+    const refreshToken = generateRefreshToken(user.id, false, user.role);
 
     res.json({
-      user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl, role: user.role },
       accessToken,
       refreshToken,
     });
@@ -175,11 +176,11 @@ router.post('/apple', async (req: AuthRequest, res: Response): Promise<void> => 
       }
     }
 
-    const accessToken = generateAccessToken(user.id);
-    const refreshToken = generateRefreshToken(user.id);
+    const accessToken = generateAccessToken(user.id, false, user.role);
+    const refreshToken = generateRefreshToken(user.id, false, user.role);
 
     res.json({
-      user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl },
+      user: { id: user.id, name: user.name, email: user.email, avatarUrl: user.avatarUrl, role: user.role },
       accessToken,
       refreshToken,
     });
@@ -249,11 +250,11 @@ router.post(
         user = await User.create({ name: 'User', phone });
       }
 
-      const accessToken = generateAccessToken(user.id);
-      const refreshToken = generateRefreshToken(user.id);
+      const accessToken = generateAccessToken(user.id, false, user.role);
+      const refreshToken = generateRefreshToken(user.id, false, user.role);
 
       res.json({
-        user: { id: user.id, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl },
+        user: { id: user.id, name: user.name, phone: user.phone, avatarUrl: user.avatarUrl, role: user.role },
         accessToken,
         refreshToken,
       });
@@ -268,7 +269,7 @@ router.post(
 router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const user = await User.findByPk(req.userId, {
-      attributes: ['id', 'name', 'email', 'phone', 'avatarUrl'],
+      attributes: ['id', 'name', 'email', 'phone', 'avatarUrl', 'role'],
     });
 
     if (!user) {
@@ -293,8 +294,22 @@ router.post('/refresh', async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     const payload = verifyRefreshToken(token);
-    const accessToken = generateAccessToken(payload.userId);
-    const refreshToken = generateRefreshToken(payload.userId);
+
+    // Look up user to get current role
+    const user = await User.findByPk(payload.userId);
+    if (!user) {
+      res.status(401).json({ message: 'User not found' });
+      return;
+    }
+
+    // Detect if this was a long-lived (remember me) refresh token
+    // by checking if its remaining lifetime exceeds the default 7d window
+    const decoded = jwt.decode(token) as { exp?: number } | null;
+    const remainingSeconds = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 0;
+    const rememberMe = remainingSeconds > 7 * 24 * 3600;
+
+    const accessToken = generateAccessToken(user.id, rememberMe, user.role);
+    const refreshToken = generateRefreshToken(user.id, rememberMe, user.role);
 
     res.json({ accessToken, refreshToken });
   } catch {

@@ -480,6 +480,20 @@ async function seed() {
     }
     console.log('Models synced');
 
+    // ── Create admin account ──
+    const adminEmail = 'amber_it_bhu@yahoo.com';
+    let adminUser = await User.findOne({ where: { email: adminEmail } });
+    if (!adminUser) {
+      const adminHash = await bcrypt.hash('Admin123!', 12);
+      adminUser = await User.create({ name: 'Admin', email: adminEmail, passwordHash: adminHash, role: 'admin' });
+      console.log(`  ✅ Created admin account: ${adminEmail}`);
+    } else if (adminUser.role !== 'admin') {
+      await adminUser.update({ role: 'admin' });
+      console.log(`  🔄 Promoted ${adminEmail} to admin`);
+    } else {
+      console.log(`  ⏭  Admin account already exists: ${adminEmail}`);
+    }
+
     const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
     let created = 0;
 

@@ -1,10 +1,22 @@
 import { Router, Response } from 'express';
 import { Op } from 'sequelize';
-import { Organization, FeedRecommendation, Post, User, Reaction, Partnership } from '../models';
+import { Organization, FeedRecommendation, Post, User, Reaction, Partnership, Media, Favorite, OrgResource } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { getRecommendations } from '../services/openai';
+import { getRecommendations, OrgWithResources } from '../services/openai';
 
 const router = Router();
+
+// Helper: build OrgWithResources from an org + its OrgResource rows
+async function buildOrgWithResources(org: Organization): Promise<OrgWithResources> {
+  const resources = await OrgResource.findAll({ where: { orgId: org.id } });
+  return {
+    id: org.id, name: org.name, mission: org.mission, category: org.category,
+    city: org.city, state: org.state, latitude: org.latitude, longitude: org.longitude,
+    size: org.size,
+    offeredResources: resources.filter(r => r.direction === 'offer').map(r => r.resource),
+    neededResources: resources.filter(r => r.direction === 'need').map(r => r.resource),
+  };
+}
 
 // AI-powered recommendations
 router.get('/recommendations', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -61,8 +73,8 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
 
     const candidates = await Organization.findAll({
       where: { id: { [Op.notIn]: excludeIds } },
-      attributes: ['id', 'name', 'mission', 'category', 'city', 'state', 'logoUrl'],
-      limit: 20,
+      attributes: ['id', 'name', 'mission', 'category', 'city', 'state', 'logoUrl', 'latitude', 'longitude', 'size'],
+      limit: 50,
     });
 
     if (candidates.length === 0) {
@@ -70,11 +82,12 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
       return;
     }
 
-    // Get AI recommendations
-    const aiResults = await getRecommendations(
-      { id: org.id, name: org.name, mission: org.mission, category: org.category, city: org.city, state: org.state },
-      candidates.map((c) => ({ id: c.id, name: c.name, mission: c.mission, category: c.category, city: c.city, state: c.state }))
-    );
+    // Build profiles with resources
+    const userProfile = await buildOrgWithResources(org);
+    const candidateProfiles = await Promise.all(candidates.map(buildOrgWithResources));
+
+    // Get scored recommendations
+    const aiResults = await getRecommendations(userProfile, candidateProfiles);
 
     // Cache the recommendations
     if (aiResults.length > 0) {
@@ -113,7 +126,23 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
   }
 });
 
-// Feed posts (from connected organizations)
+// Helper: enrich posts with reaction counts
+async function enrichPosts(posts: Post[]) {
+  return Promise.all(
+    posts.map(async (post) => {
+      const reactionCount = await Reaction.count({ where: { postId: post.id } });
+      return { ...post.toJSON(), _count: { reactions: reactionCount } };
+    })
+  );
+}
+
+const postIncludes = [
+  { model: User, as: 'author', attributes: ['id', 'name', 'avatarUrl'] },
+  { model: Organization, as: 'organization', attributes: ['id', 'name', 'logoUrl'] },
+  { model: Media, as: 'media', attributes: ['id', 'url', 'type', 'caption', 'displayOrder'] },
+];
+
+// Feed posts — connected orgs (default, backward compatible)
 router.get('/posts', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const org = await Organization.findOne({ where: { ownerId: req.userId } });
@@ -136,24 +165,91 @@ router.get('/posts', authenticate, async (req: AuthRequest, res: Response): Prom
 
     const posts = await Post.findAll({
       where: { orgId: { [Op.in]: connectedOrgIds } },
-      include: [
-        { model: User, as: 'author', attributes: ['id', 'name', 'avatarUrl'] },
-        { model: Organization, as: 'organization', attributes: ['id', 'name'] },
-      ],
+      include: postIncludes,
       order: [['createdAt', 'DESC']],
       limit: 50,
     });
 
-    const postsWithCounts = await Promise.all(
-      posts.map(async (post) => {
-        const reactionCount = await Reaction.count({ where: { postId: post.id } });
-        return { ...post.toJSON(), _count: { reactions: reactionCount } };
-      })
-    );
-
-    res.json(postsWithCounts);
+    res.json(await enrichPosts(posts));
   } catch (error) {
     console.error('Feed posts error:', error);
+    res.json([]);
+  }
+});
+
+// All posts
+router.get('/posts/all', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const posts = await Post.findAll({
+      include: postIncludes,
+      order: [['createdAt', 'DESC']],
+      limit: 50,
+    });
+    res.json(await enrichPosts(posts));
+  } catch (error) {
+    console.error('All posts error:', error);
+    res.json([]);
+  }
+});
+
+// Posts from favorited orgs
+router.get('/posts/favorites', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const favorites = await Favorite.findAll({
+      where: { userId: req.userId },
+      attributes: ['orgId'],
+    });
+
+    const orgIds = favorites.map((f) => f.orgId);
+    if (orgIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const posts = await Post.findAll({
+      where: { orgId: { [Op.in]: orgIds } },
+      include: postIncludes,
+      order: [['createdAt', 'DESC']],
+      limit: 50,
+    });
+
+    res.json(await enrichPosts(posts));
+  } catch (error) {
+    console.error('Favorites posts error:', error);
+    res.json([]);
+  }
+});
+
+// Posts from AI-recommended orgs
+router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const org = await Organization.findOne({ where: { ownerId: req.userId } });
+    if (!org) {
+      res.json([]);
+      return;
+    }
+
+    const recs = await FeedRecommendation.findAll({
+      where: { orgId: org.id },
+      attributes: ['recommendedOrgId'],
+    });
+
+    const recOrgIds = recs.map((r) => r.recommendedOrgId);
+    if (recOrgIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const posts = await Post.findAll({
+      where: { orgId: { [Op.in]: recOrgIds } },
+      include: postIncludes,
+      order: [['createdAt', 'DESC']],
+      limit: 50,
+    });
+
+    res.json(await enrichPosts(posts));
+  } catch (error) {
+    console.error('Recommended posts error:', error);
     res.json([]);
   }
 });

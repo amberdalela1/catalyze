@@ -196,6 +196,11 @@ router.post(
         return;
       }
 
+      if (!myOrg.canMessage) {
+        res.status(403).json({ message: 'Your organization\'s messaging privileges have been suspended by an admin' });
+        return;
+      }
+
       const { receiverOrgId, content } = req.body;
 
       if (myOrg.id === receiverOrgId) {
@@ -232,6 +237,93 @@ router.post(
       res.status(201).json(message);
     } catch (error) {
       console.error('Send message error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+);
+
+// Batch check messaging status for multiple orgs
+// Returns { [orgId]: { isConnected, sentCount, maxMessages, canMessage } }
+router.post(
+  '/status',
+  authenticate,
+  [
+    body('orgIds').isArray({ min: 1, max: 100 }).withMessage('orgIds must be an array'),
+    handleValidationErrors,
+  ],
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const myOrg = await Organization.findOne({ where: { ownerId: req.userId } });
+      if (!myOrg) {
+        res.json({});
+        return;
+      }
+
+      const orgIds: number[] = req.body.orgIds
+        .map((id: unknown) => Number(id))
+        .filter((id: number) => !isNaN(id) && id !== myOrg.id);
+
+      if (orgIds.length === 0) {
+        res.json({});
+        return;
+      }
+
+      // Find all accepted partnerships with these orgs
+      const partnerships = await Partnership.findAll({
+        where: {
+          status: 'accepted',
+          [Op.or]: orgIds.map((otherId: number) => ({
+            [Op.or]: [
+              { requesterId: myOrg.id, targetId: otherId },
+              { requesterId: otherId, targetId: myOrg.id },
+            ],
+          })),
+        },
+      });
+
+      const connectedIds = new Set<number>();
+      partnerships.forEach(p => {
+        connectedIds.add(p.requesterId === myOrg.id ? p.targetId : p.requesterId);
+      });
+
+      // For non-connected orgs, count sent messages
+      const nonConnectedIds = orgIds.filter(id => !connectedIds.has(id));
+      const sentCounts = new Map<number, number>();
+
+      if (nonConnectedIds.length > 0) {
+        const counts = await Message.findAll({
+          where: {
+            senderOrgId: myOrg.id,
+            receiverOrgId: nonConnectedIds,
+          },
+          attributes: [
+            'receiverOrgId',
+            [sequelize.fn('COUNT', sequelize.col('id')), 'cnt'],
+          ],
+          group: ['receiverOrgId'],
+          raw: true,
+        }) as any[];
+
+        counts.forEach((row: any) => {
+          sentCounts.set(row.receiverOrgId, Number(row.cnt));
+        });
+      }
+
+      const result: Record<number, { isConnected: boolean; sentCount: number; maxMessages: number | null; canMessage: boolean }> = {};
+      for (const orgId of orgIds) {
+        const isConnected = connectedIds.has(orgId);
+        const sentCount = isConnected ? 0 : (sentCounts.get(orgId) || 0);
+        result[orgId] = {
+          isConnected,
+          sentCount,
+          maxMessages: isConnected ? null : MAX_UNCONNECTED_MESSAGES,
+          canMessage: isConnected || sentCount < MAX_UNCONNECTED_MESSAGES,
+        };
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Message status error:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   }

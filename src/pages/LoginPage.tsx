@@ -5,6 +5,16 @@ import { loginWithEmail } from '../services/auth';
 import { isNative } from '../utils/platform';
 import TextInput from '../components/ui/TextInput';
 import Button from '../components/ui/Button';
+import { MobileIcon } from '../components/ui/Icons';
+
+function ChevronLeftIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+    </svg>
+  );
+}
+
 import styles from './AuthPage.module.css';
 
 export default function LoginPage() {
@@ -45,7 +55,7 @@ export default function LoginPage() {
   return (
     <div className={styles.page}>
       <button className={styles.backBtn} onClick={() => navigate('/welcome')}>
-        ← Back
+        <ChevronLeftIcon size={20} /> Back
       </button>
 
       <h1 className={styles.heading}>Welcome back</h1>
@@ -107,7 +117,7 @@ export default function LoginPage() {
           onClick={() => {/* Phone OTP flow placeholder */}}
           type="button"
         >
-          <span className={styles.socialIcon}>📱</span>
+          <span className={styles.socialIcon}><MobileIcon size={18} /></span>
           Phone Number
         </button>
       </div>

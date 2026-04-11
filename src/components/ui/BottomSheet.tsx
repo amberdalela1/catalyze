@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { CloseIcon } from './Icons';
 import styles from './BottomSheet.module.css';
 
 interface BottomSheetProps {
@@ -29,7 +30,7 @@ export default function BottomSheet({ open, onClose, title, children }: BottomSh
           <div className={styles.header}>
             <h3 className={styles.title}>{title}</h3>
             <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
-              ✕
+              <CloseIcon size={20} />
             </button>
           </div>
         )}

@@ -6,6 +6,8 @@ import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import Card, { CardBody } from '../components/ui/Card';
 import { LoadingCenter } from '../components/ui/Loading';
+import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
+import HandshakeIcon from '../components/ui/HandshakeIcon';
 
 interface ConversationSummary {
   otherOrgId: number;
@@ -48,7 +50,7 @@ export default function InboxPage() {
       <div style={{ padding: 'var(--space-4)' }}>
         {conversations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-12) var(--space-4)', color: 'var(--color-gray-500)' }}>
-            <p style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--space-2)' }}>💬</p>
+            <div style={{ marginBottom: 'var(--space-2)', color: 'var(--color-gray-400)' }}><MessageBubbleIcon size={40} /></div>
             <p style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-1)' }}>
               No messages yet
             </p>
@@ -77,7 +79,7 @@ export default function InboxPage() {
                       }}>
                         {conv.otherOrg.name}
                       </h3>
-                      <Badge>{conv.isConnected ? '🤝 Connected' : 'Not Connected'}</Badge>
+                      <Badge>{conv.isConnected ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><HandshakeIcon size={14} /> Connected</span> : 'Not Connected'}</Badge>
                     </div>
                     <p style={{
                       fontSize: 'var(--font-size-sm)',

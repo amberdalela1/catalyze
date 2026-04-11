@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { body } from 'express-validator';
 import { Op } from 'sequelize';
-import { Organization, User } from '../models';
+import { Organization, User, Media, OrgResource } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
 
@@ -12,6 +12,10 @@ router.get('/mine', authenticate, async (req: AuthRequest, res: Response): Promi
   try {
     const org = await Organization.findOne({
       where: { ownerId: req.userId },
+      include: [
+        { model: Media, as: 'media', where: { postId: null }, required: false, attributes: ['id', 'url', 'type', 'caption', 'displayOrder'] },
+        { model: OrgResource, as: 'resources', required: false, attributes: ['id', 'resource', 'direction', 'isCustom'] },
+      ],
     });
 
     if (!org) {
@@ -118,7 +122,11 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
   try {
     const orgId = Number(req.params.id);
     const org = await Organization.findByPk(orgId, {
-      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'avatarUrl'] }],
+      include: [
+        { model: User, as: 'owner', attributes: ['id', 'name', 'avatarUrl'] },
+        { model: Media, as: 'media', where: { postId: null }, required: false, attributes: ['id', 'url', 'type', 'caption', 'displayOrder'] },
+        { model: OrgResource, as: 'resources', required: false, attributes: ['id', 'resource', 'direction', 'isCustom'] },
+      ],
     });
 
     if (!org) {
@@ -169,7 +177,7 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    if (org.ownerId !== req.userId) {
+    if (org.ownerId !== req.userId && req.userRole !== 'admin') {
       res.status(403).json({ message: 'Not authorized' });
       return;
     }
@@ -192,7 +200,7 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    if (org.ownerId !== req.userId) {
+    if (org.ownerId !== req.userId && req.userRole !== 'admin') {
       res.status(403).json({ message: 'Not authorized' });
       return;
     }

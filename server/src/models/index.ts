@@ -7,6 +7,7 @@ export class User extends Model {
   declare phone: string | null;
   declare passwordHash: string | null;
   declare name: string;
+  declare role: 'user' | 'admin';
   declare avatarUrl: string | null;
   declare googleId: string | null;
   declare appleId: string | null;
@@ -38,6 +39,11 @@ User.init(
     name: {
       type: DataTypes.STRING(255),
       allowNull: false,
+    },
+    role: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'user',
     },
     avatarUrl: {
       type: DataTypes.STRING(500),
@@ -76,6 +82,9 @@ export class Organization extends Model {
   declare contactPhone: string | null;
   declare registrationNo: string | null;
   declare logoUrl: string | null;
+  declare size: 'small' | 'medium' | 'large' | null;
+  declare canPost: boolean;
+  declare canMessage: boolean;
   declare ownerId: number;
   declare createdAt: Date;
   declare updatedAt: Date;
@@ -139,6 +148,20 @@ Organization.init(
     logoUrl: {
       type: DataTypes.STRING(500),
       allowNull: true,
+    },
+    size: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+    },
+    canPost: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    canMessage: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
     ownerId: {
       type: DataTypes.INTEGER,
@@ -444,6 +467,104 @@ Message.init(
   }
 );
 
+export class Media extends Model {
+  declare id: number;
+  declare orgId: number | null;
+  declare postId: number | null;
+  declare url: string;
+  declare type: 'image' | 'video';
+  declare caption: string | null;
+  declare displayOrder: number;
+  declare createdAt: Date;
+}
+
+Media.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    orgId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    postId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    url: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
+    },
+    type: {
+      type: DataTypes.STRING(10),
+      allowNull: false,
+      defaultValue: 'image',
+    },
+    caption: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    displayOrder: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'media',
+    timestamps: true,
+    updatedAt: false,
+  }
+);
+
+export class OrgResource extends Model {
+  declare id: number;
+  declare orgId: number;
+  declare resource: string;
+  declare direction: 'offer' | 'need';
+  declare isCustom: boolean;
+}
+
+OrgResource.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    orgId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    resource: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+    direction: {
+      type: DataTypes.STRING(10),
+      allowNull: false,
+    },
+    isCustom: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'org_resources',
+    timestamps: true,
+    updatedAt: false,
+    indexes: [
+      { fields: ['orgId', 'direction'] },
+      { unique: true, fields: ['orgId', 'resource', 'direction'] },
+    ],
+  }
+);
+
 // Associations
 User.hasOne(Organization, { foreignKey: 'ownerId', as: 'organization' });
 Organization.belongsTo(User, { foreignKey: 'ownerId', as: 'owner' });
@@ -477,3 +598,11 @@ Organization.hasMany(Message, { foreignKey: 'senderOrgId', as: 'sentMessages' })
 Organization.hasMany(Message, { foreignKey: 'receiverOrgId', as: 'receivedMessages' });
 Message.belongsTo(Organization, { foreignKey: 'senderOrgId', as: 'senderOrg' });
 Message.belongsTo(Organization, { foreignKey: 'receiverOrgId', as: 'receiverOrg' });
+
+Organization.hasMany(Media, { foreignKey: 'orgId', as: 'media' });
+Media.belongsTo(Organization, { foreignKey: 'orgId' });
+Post.hasMany(Media, { foreignKey: 'postId', as: 'media' });
+Media.belongsTo(Post, { foreignKey: 'postId' });
+
+Organization.hasMany(OrgResource, { foreignKey: 'orgId', as: 'resources' });
+OrgResource.belongsTo(Organization, { foreignKey: 'orgId' });

@@ -7,6 +7,19 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Card, { CardBody } from '../components/ui/Card';
 import { LoadingCenter } from '../components/ui/Loading';
+import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
+import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
+import HandshakeIcon from '../components/ui/HandshakeIcon';
+import { StarIcon, DiamondIcon, LocationIcon, EmailIcon, PhoneIcon, BuildingIcon, HourglassIcon, CheckCircleIcon } from '../components/ui/Icons';
+import { ORG_SIZES } from '../utils/resources';
+import headerStyles from '../components/ui/Header.module.css';
+
+interface OrgResource {
+  id: number;
+  resource: string;
+  direction: string;
+  isCustom: boolean;
+}
 
 interface OrgDetail {
   id: number;
@@ -20,11 +33,14 @@ interface OrgDetail {
   contactEmail?: string;
   contactPhone?: string;
   registrationNo?: string;
+  size?: string;
   logoUrl?: string;
   isOwner?: boolean;
   isFavorited?: boolean;
   partnershipStatus?: 'none' | 'pending' | 'accepted';
   partnershipId?: number;
+  media?: MediaItem[];
+  resources?: OrgResource[];
 }
 
 const STANDARD_CATEGORIES = [
@@ -79,11 +95,11 @@ export default function OrgProfilePage() {
       <Header title={org.name} showBack
         actions={
           <button
+            className={headerStyles.actionBtn}
             onClick={handleToggleFavorite}
-            style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', padding: 'var(--space-1)' }}
             aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
           >
-            {favorited ? '⭐' : '☆'}
+            <StarIcon filled={favorited} />
           </button>
         }
       />
@@ -94,11 +110,11 @@ export default function OrgProfilePage() {
           {org.name}
         </h2>
         <Badge variant={STANDARD_CATEGORIES.includes(org.category) ? 'primary' : 'neutral'}>
-          {!STANDARD_CATEGORIES.includes(org.category) && '✦ '}{org.category}
+          {!STANDARD_CATEGORIES.includes(org.category) && <><DiamondIcon size={14} />{' '}</>}{org.category}
         </Badge>
         {org.city && (
-          <p style={{ color: 'var(--color-gray-500)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)' }}>
-            📍 {org.city}{org.state ? `, ${org.state}` : ''}
+          <p style={{ color: 'var(--color-gray-500)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+            <LocationIcon size={16} /> {org.city}{org.state ? `, ${org.state}` : ''}
           </p>
         )}
       </div>
@@ -106,7 +122,7 @@ export default function OrgProfilePage() {
       <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
         {!org.isOwner && org.partnershipStatus === 'none' && (
           <Button fullWidth onClick={handleConnect} disabled={connecting}>
-            {connecting ? 'Sending...' : '🤝 Connect'}
+            {connecting ? 'Sending...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><HandshakeIcon size={18} /> Connect</span>}
           </Button>
         )}
         {org.partnershipStatus === 'pending' && (
@@ -125,12 +141,12 @@ export default function OrgProfilePage() {
             }}
             disabled={withdrawing}
           >
-            {withdrawing ? 'Withdrawing...' : '⏳ Pending — Tap to Withdraw'}
+            {withdrawing ? 'Withdrawing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><HourglassIcon size={18} /> Pending — Tap to Withdraw</span>}
           </Button>
         )}
         {org.partnershipStatus === 'accepted' && (
           <Button fullWidth variant="secondary" disabled>
-            ✅ Connected
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><CheckCircleIcon size={18} /> Connected</span>
           </Button>
         )}
         {!org.isOwner && (
@@ -140,10 +156,16 @@ export default function OrgProfilePage() {
             onClick={() => navigate(`/messages/${org.id}`)}
             style={{ marginTop: 'var(--space-2)' }}
           >
-            💬 Message
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><MessageBubbleIcon size={18} /> Message</span>
           </Button>
         )}
       </div>
+
+      {org.media && org.media.length > 0 && (
+        <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
+          <MediaCollage media={org.media} />
+        </div>
+      )}
 
       <div style={{ padding: 'var(--space-4)' }}>
         <Card>
@@ -196,18 +218,18 @@ export default function OrgProfilePage() {
               </h3>
               {org.contactEmail && (
                 <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-1)' }}>
-                  ✉️{' '}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><EmailIcon size={16} />{' '}
                   <a href={`mailto:${org.contactEmail}`} style={{ color: 'var(--color-primary)' }}>
                     {org.contactEmail}
-                  </a>
+                  </a></span>
                 </p>
               )}
               {org.contactPhone && (
                 <p style={{ color: 'var(--color-gray-600)' }}>
-                  📞{' '}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><PhoneIcon size={16} />{' '}
                   <a href={`tel:${org.contactPhone}`} style={{ color: 'var(--color-primary)' }}>
                     {org.contactPhone}
-                  </a>
+                  </a></span>
                 </p>
               )}
             </CardBody>
@@ -218,7 +240,45 @@ export default function OrgProfilePage() {
           <Card style={{ marginTop: 'var(--space-3)' }}>
             <CardBody>
               <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Registration No.</h3>
-              <p style={{ color: 'var(--color-gray-600)' }}>🏛️ {org.registrationNo}</p>
+              <p style={{ color: 'var(--color-gray-600)', display: 'flex', alignItems: 'center', gap: '6px' }}><BuildingIcon size={16} /> {org.registrationNo}</p>
+            </CardBody>
+          </Card>
+        )}
+
+        {org.size && (
+          <Card style={{ marginTop: 'var(--space-3)' }}>
+            <CardBody>
+              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Organization Size</h3>
+              <Badge variant="primary">{ORG_SIZES.find(s => s.value === org.size)?.label || org.size}</Badge>
+              <p style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-1)' }}>
+                {ORG_SIZES.find(s => s.value === org.size)?.description}
+              </p>
+            </CardBody>
+          </Card>
+        )}
+
+        {org.resources && org.resources.filter(r => r.direction === 'offer').length > 0 && (
+          <Card style={{ marginTop: 'var(--space-3)' }}>
+            <CardBody>
+              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Resources They Offer</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                {org.resources.filter(r => r.direction === 'offer').map(r => (
+                  <Badge key={r.id} variant="success">{r.resource}</Badge>
+                ))}
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
+        {org.resources && org.resources.filter(r => r.direction === 'need').length > 0 && (
+          <Card style={{ marginTop: 'var(--space-3)' }}>
+            <CardBody>
+              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Resources They Need</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                {org.resources.filter(r => r.direction === 'need').map(r => (
+                  <Badge key={r.id} variant="warning">{r.resource}</Badge>
+                ))}
+              </div>
             </CardBody>
           </Card>
         )}

@@ -1,0 +1,23 @@
+.favoriteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.favoriteBtn:hover {
+  background-color: var(--color-primary-100);
+}
+
+.favoriteBtn:active {
+  background-color: var(--color-primary-200, rgba(107, 142, 110, 0.2));
+  opacity: 0.85;
+}

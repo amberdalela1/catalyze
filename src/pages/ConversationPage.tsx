@@ -4,6 +4,8 @@ import { api } from '../services/api';
 import Header from '../components/ui/Header';
 import Badge from '../components/ui/Badge';
 import { LoadingCenter } from '../components/ui/Loading';
+import HandshakeIcon from '../components/ui/HandshakeIcon';
+import { WarningIcon } from '../components/ui/Icons';
 
 interface MessageItem {
   id: number;
@@ -80,7 +82,7 @@ export default function ConversationPage() {
         title={data.otherOrg.name}
         showBack
         actions={
-          <Badge>{data.isConnected ? '🤝 Connected' : 'Not Connected'}</Badge>
+          <Badge>{data.isConnected ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><HandshakeIcon size={14} /> Connected</span> : 'Not Connected'}</Badge>
         }
       />
 
@@ -144,7 +146,7 @@ export default function ConversationPage() {
           fontSize: 'var(--font-size-xs)',
           color: 'var(--color-gray-600)',
         }}>
-          ⚠️ {remaining} message{remaining === 1 ? '' : 's'} remaining — connect to send unlimited messages
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><WarningIcon size={14} /> {remaining} message{remaining === 1 ? '' : 's'} remaining</span> — connect to send unlimited messages
         </div>
       )}
 

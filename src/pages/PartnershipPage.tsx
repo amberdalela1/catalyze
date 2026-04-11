@@ -7,6 +7,8 @@ import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { LoadingCenter } from '../components/ui/Loading';
+import HandshakeIcon from '../components/ui/HandshakeIcon';
+import { StarIcon, LocationIcon } from '../components/ui/Icons';
 
 interface Partnership {
   id: number;
@@ -42,7 +44,13 @@ export default function PartnershipPage() {
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [favorites, setFavorites] = useState<FavoriteOrg[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'all' | 'pending' | 'connected' | 'favorites'>('all');
+  const [tab, setTabState] = useState<'all' | 'pending' | 'connected' | 'favorites'>(
+    () => (sessionStorage.getItem('partnersTab') as 'all' | 'pending' | 'connected' | 'favorites') || 'all'
+  );
+  const setTab = (t: 'all' | 'pending' | 'connected' | 'favorites') => {
+    setTabState(t);
+    sessionStorage.setItem('partnersTab', t);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -111,7 +119,7 @@ export default function PartnershipPage() {
         {tab === 'favorites' ? (
           favorites.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-gray-400)' }}>
-              <p style={{ fontSize: '48px', marginBottom: 'var(--space-4)' }}>☆</p>
+              <p style={{ fontSize: '48px', marginBottom: 'var(--space-4)' }}><StarIcon size={48} /></p>
               <p>No favorites yet. Tap the star on an org's profile to save it.</p>
             </div>
           ) : (
@@ -131,8 +139,8 @@ export default function PartnershipPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-1)' }}>
                         <Badge>{fav.organization.category}</Badge>
                         {fav.organization.city && (
-                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-400)' }}>
-                            📍 {fav.organization.city}{fav.organization.state ? `, ${fav.organization.state}` : ''}
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-400)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                            <LocationIcon size={14} /> {fav.organization.city}{fav.organization.state ? `, ${fav.organization.state}` : ''}
                           </span>
                         )}
                       </div>
@@ -150,7 +158,7 @@ export default function PartnershipPage() {
           )
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-gray-400)' }}>
-            <p style={{ fontSize: '48px', marginBottom: 'var(--space-4)' }}>🤝</p>
+            <div style={{ marginBottom: 'var(--space-4)', color: 'var(--color-gray-400)' }}><HandshakeIcon size={48} /></div>
             <p>No partnerships yet. Discover organizations to connect with!</p>
           </div>
         ) : (

@@ -14,6 +14,10 @@ import feedRoutes from './routes/feed';
 import favoriteRoutes from './routes/favorites';
 import messageRoutes from './routes/messages';
 import scrapeRoutes from './routes/scrape';
+import mediaRoutes from './routes/media';
+import resourceRoutes from './routes/resources';
+import adminRoutes from './routes/admin';
+import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -36,6 +40,9 @@ app.use(rateLimit({
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 
+// Serve uploaded media files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/organizations', organizationRoutes);
@@ -45,6 +52,9 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/scrape-contact', scrapeRoutes);
+app.use('/api/media', mediaRoutes);
+app.use('/api/resources', resourceRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

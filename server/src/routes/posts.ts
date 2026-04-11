@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { body } from 'express-validator';
-import { Post, Organization, User, Reaction } from '../models';
+import { Post, Organization, User, Reaction, Media } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
 
@@ -21,6 +21,11 @@ router.post(
       const org = await Organization.findOne({ where: { ownerId: req.userId } });
       if (!org) {
         res.status(400).json({ message: 'You must create an organization first' });
+        return;
+      }
+
+      if (!org.canPost) {
+        res.status(403).json({ message: 'Your organization\'s posting privileges have been suspended by an admin' });
         return;
       }
 
@@ -48,7 +53,8 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
       where,
       include: [
         { model: User, as: 'author', attributes: ['id', 'name', 'avatarUrl'] },
-        { model: Organization, as: 'organization', attributes: ['id', 'name'] },
+        { model: Organization, as: 'organization', attributes: ['id', 'name', 'logoUrl'] },
+        { model: Media, as: 'media', attributes: ['id', 'url', 'type', 'caption', 'displayOrder'] },
       ],
       order: [['createdAt', 'DESC']],
       limit: 50,
@@ -100,7 +106,8 @@ router.get('/feed', authenticate, async (req: AuthRequest, res: Response): Promi
       where: { orgId: { [Op.in]: connectedOrgIds } },
       include: [
         { model: User, as: 'author', attributes: ['id', 'name', 'avatarUrl'] },
-        { model: Organization, as: 'organization', attributes: ['id', 'name'] },
+        { model: Organization, as: 'organization', attributes: ['id', 'name', 'logoUrl'] },
+        { model: Media, as: 'media', attributes: ['id', 'url', 'type', 'caption', 'displayOrder'] },
       ],
       order: [['createdAt', 'DESC']],
       limit: 50,
