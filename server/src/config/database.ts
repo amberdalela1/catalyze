@@ -3,10 +3,14 @@ import path from 'path';
 
 const useSQLite = !process.env.DB_HOST || process.env.DB_DIALECT === 'sqlite';
 
+// Use persistent disk path if available (e.g., Render), otherwise local path
+const sqlitePath = process.env.SQLITE_PATH
+  || path.join(__dirname, '..', '..', 'catalyze-dev.sqlite');
+
 export const sequelize = useSQLite
   ? new Sequelize({
       dialect: 'sqlite',
-      storage: path.join(__dirname, '..', '..', 'catalyze-dev.sqlite'),
+      storage: sqlitePath,
       logging: process.env.NODE_ENV === 'development' ? console.log : false,
     })
   : new Sequelize({
