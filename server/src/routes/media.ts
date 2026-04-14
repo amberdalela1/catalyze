@@ -5,22 +5,27 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { Media, Organization } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { isS3Configured, uploadToS3, deleteFromS3 } from '../services/storage';
 
+const useS3 = isS3Configured();
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 
-// Ensure uploads directory exists
-if (!fs.existsSync(UPLOADS_DIR)) {
+// Ensure uploads directory exists (for local fallback)
+if (!useS3 && !fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
-  filename: (_req, file, cb) => {
-    const uniqueId = crypto.randomBytes(12).toString('hex');
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${uniqueId}${ext}`);
-  },
-});
+// Use memory storage when S3 is configured, disk storage otherwise
+const storage = useS3
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+      filename: (_req, file, cb) => {
+        const uniqueId = crypto.randomBytes(12).toString('hex');
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, `${uniqueId}${ext}`);
+      },
+    });
 
 const ALLOWED_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -66,15 +71,21 @@ router.post(
       }
 
       const mediaRecords = await Promise.all(
-        files.map((file, index) =>
-          Media.create({
+        files.map(async (file, index) => {
+          let url: string;
+          if (useS3) {
+            url = await uploadToS3(file.buffer, file.originalname, file.mimetype);
+          } else {
+            url = `/uploads/${file.filename}`;
+          }
+          return Media.create({
             orgId: orgId ? Number(orgId) : null,
             postId: postId ? Number(postId) : null,
-            url: `/uploads/${file.filename}`,
+            url,
             type: file.mimetype.startsWith('video/') ? 'video' : 'image',
             displayOrder: index,
-          })
-        )
+          });
+        })
       );
 
       res.status(201).json(mediaRecords);
@@ -117,10 +128,18 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Pro
       }
     }
 
-    // Delete file from disk
-    const filePath = path.join(UPLOADS_DIR, path.basename(media.url));
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Delete file from storage
+    if (useS3 && media.url.startsWith('http')) {
+      try {
+        await deleteFromS3(media.url);
+      } catch (err) {
+        console.warn('S3 delete failed (continuing):', err);
+      }
+    } else {
+      const filePath = path.join(UPLOADS_DIR, path.basename(media.url));
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     await media.destroy();
