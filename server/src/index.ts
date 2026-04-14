@@ -25,8 +25,11 @@ const isProd = process.env.NODE_ENV === 'production';
 
 // Validate critical env vars in production
 if (isProd) {
-  const required = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'DB_HOST', 'CORS_ORIGIN'];
+  const required = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'CORS_ORIGIN'];
   const missing = required.filter(key => !process.env[key]);
+  if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
+    missing.push('DATABASE_URL or DB_HOST');
+  }
   if (missing.length > 0) {
     console.error(`FATAL: Missing required env vars for production: ${missing.join(', ')}`);
     process.exit(1);
