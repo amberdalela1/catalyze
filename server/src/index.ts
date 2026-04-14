@@ -21,6 +21,21 @@ import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const isProd = process.env.NODE_ENV === 'production';
+
+// Validate critical env vars in production
+if (isProd) {
+  const required = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'DB_HOST', 'CORS_ORIGIN'];
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(`FATAL: Missing required env vars for production: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+  if (process.env.JWT_SECRET === 'change-this-secret') {
+    console.error('FATAL: JWT_SECRET must be changed from the default value in production');
+    process.exit(1);
+  }
+}
 
 // Security middleware
 app.use(helmet());
@@ -32,7 +47,7 @@ app.use(cors({
 // Rate limiting
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
+  max: isProd ? 100 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
 }));
@@ -67,7 +82,7 @@ async function start() {
     await sequelize.authenticate();
     console.log('Database connected');
 
-    if (process.env.NODE_ENV !== 'production') {
+    if (!isProd) {
       // Use FORCE_SYNC=true env var to explicitly reset the database when needed.
       if (process.env.FORCE_SYNC === 'true') {
         await sequelize.sync({ force: true });
@@ -81,6 +96,9 @@ async function start() {
         }
         console.log('Models synced');
       }
+    } else {
+      // In production, only verify the connection — use migrations for schema changes
+      console.log('Production mode: skipping auto-sync (use migrations)');
     }
   } catch (error) {
     console.warn('Database connection failed — running without DB:', (error as Error).message);

@@ -9,6 +9,7 @@
     "seed": "tsx src/seed.ts"
   },
   "dependencies": {
+    "apple-signin-auth": "^2.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
@@ -21,7 +22,8 @@
     "openai": "^4.60.0",
     "sequelize": "^6.37.0",
     "sqlite3": "^6.0.1",
-    "tedious": "^18.6.0"
+    "tedious": "^18.6.0",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
