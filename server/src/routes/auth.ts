@@ -12,6 +12,8 @@ import {
 } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
 import crypto from 'crypto';
+import appleSignIn from 'apple-signin-auth';
+import { sendSMS, isTwilioConfigured } from '../services/twilio';
 
 const router = Router();
 
@@ -147,16 +149,20 @@ router.post('/apple', async (req: AuthRequest, res: Response): Promise<void> => 
       return;
     }
 
-    // Decode Apple identity token (JWT) to get the subject (user ID)
-    // In production, verify the token signature with Apple's public keys
-    const parts = identityToken.split('.');
-    if (parts.length !== 3) {
+    // Verify Apple identity token with Apple's public keys
+    const clientId = process.env.APPLE_CLIENT_ID || 'com.catalyze.app';
+    let payload: { sub: string; email?: string };
+
+    try {
+      payload = await appleSignIn.verifyIdToken(identityToken, {
+        audience: clientId,
+        ignoreExpiration: false,
+      }) as { sub: string; email?: string };
+    } catch (verifyErr) {
+      console.error('Apple token verification failed:', verifyErr);
       res.status(401).json({ message: 'Invalid Apple token' });
       return;
     }
-
-    const payloadStr = Buffer.from(parts[1], 'base64url').toString('utf-8');
-    const payload = JSON.parse(payloadStr) as { sub: string; email?: string };
 
     let user = await User.findOne({ where: { appleId: payload.sub } });
     if (!user) {
@@ -207,10 +213,18 @@ router.post(
 
       await PhoneOTP.create({ phone, code, expiresAt });
 
-      // In production, send via Twilio/AWS SNS
-      // For development, log the code
-      if (process.env.NODE_ENV !== 'production') {
+      // Send OTP via Twilio in production, log in dev
+      if (isTwilioConfigured()) {
+        const sent = await sendSMS(phone, `Your Catalyze verification code is: ${code}. It expires in 10 minutes.`);
+        if (!sent) {
+          res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
+          return;
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
         console.log(`OTP for ${phone}: ${code}`);
+      } else {
+        res.status(503).json({ message: 'SMS service not configured' });
+        return;
       }
 
       res.json({ message: 'OTP sent successfully' });
