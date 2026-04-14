@@ -101,8 +101,9 @@ async function start() {
         console.log('Models synced');
       }
     } else {
-      // In production, only verify the connection — use migrations for schema changes
-      console.log('Production mode: skipping auto-sync (use migrations)');
+      // In production, sync without alter (safe — only creates missing tables, never modifies)
+      await sequelize.sync();
+      console.log('Production: tables synced');
     }
   } catch (error) {
     console.warn('Database connection failed — running without DB:', (error as Error).message);
