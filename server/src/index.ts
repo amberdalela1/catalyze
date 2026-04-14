@@ -6,6 +6,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { sequelize } from './config/database';
+import { User } from './models';
+import { seedDatabase } from './seed';
 import authRoutes from './routes/auth';
 import organizationRoutes from './routes/organizations';
 import postRoutes from './routes/posts';
@@ -104,6 +106,13 @@ async function start() {
       // In production, sync without alter (safe — only creates missing tables, never modifies)
       await sequelize.sync();
       console.log('Production: tables synced');
+    }
+
+    // Auto-seed if database is empty (first deploy / fresh DB)
+    const userCount = await User.count();
+    if (userCount === 0) {
+      console.log('Empty database detected — running auto-seed...');
+      await seedDatabase();
     }
   } catch (error) {
     console.warn('Database connection failed — running without DB:', (error as Error).message);

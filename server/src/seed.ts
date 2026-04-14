@@ -469,7 +469,68 @@ const SEED_ORGS: SeedOrg[] = [
   },
 ];
 
-async function seed() {
+export async function seedDatabase() {
+  // ── Create admin account ──
+  const adminEmail = 'amber_it_bhu@yahoo.com';
+  let adminUser = await User.findOne({ where: { email: adminEmail } });
+  if (!adminUser) {
+    const adminHash = await bcrypt.hash('Admin123!', 12);
+    adminUser = await User.create({ name: 'Admin', email: adminEmail, passwordHash: adminHash, role: 'admin' });
+    console.log(`  ✅ Created admin account: ${adminEmail}`);
+  } else if (adminUser.role !== 'admin') {
+    await adminUser.update({ role: 'admin' });
+    console.log(`  🔄 Promoted ${adminEmail} to admin`);
+  } else {
+    console.log(`  ⏭  Admin account already exists: ${adminEmail}`);
+  }
+
+  const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
+  let created = 0;
+
+  for (let i = 0; i < SEED_ORGS.length; i++) {
+    const orgData = SEED_ORGS[i];
+
+    // Check if org already exists by name
+    const existing = await Organization.findOne({ where: { name: orgData.name } });
+    if (existing) {
+      // Update registrationNo if missing
+      if (!existing.registrationNo && orgData.registrationNo) {
+        await existing.update({ registrationNo: orgData.registrationNo });
+        console.log(`  🔄 Updated "${orgData.name}" with registrationNo ${orgData.registrationNo}`);
+      } else {
+        console.log(`  ⏭  Skipping "${orgData.name}" (already exists)`);
+      }
+      continue;
+    }
+
+    // Create a seed user for this org
+    const emailSlug = orgData.name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20);
+    const seedEmail = `seed-${emailSlug}@catalyze.dev`;
+
+    let user = await User.findOne({ where: { email: seedEmail } });
+    if (!user) {
+      user = await User.create({
+        email: seedEmail,
+        name: `${orgData.name} Admin`,
+        passwordHash,
+      });
+    }
+
+    await Organization.create({
+      ...orgData,
+      ownerId: user.id,
+    });
+
+    created++;
+    console.log(`  ✅ Created "${orgData.name}" (${orgData.category})`);
+  }
+
+  console.log(`\nDone! Created ${created} organizations (${SEED_ORGS.length - created} already existed).`);
+  console.log(`Seed accounts use password: ${SEED_PASSWORD}`);
+}
+
+// Standalone script entry point
+async function main() {
   try {
     await sequelize.authenticate();
     console.log('Database connected');
@@ -480,63 +541,7 @@ async function seed() {
     }
     console.log('Models synced');
 
-    // ── Create admin account ──
-    const adminEmail = 'amber_it_bhu@yahoo.com';
-    let adminUser = await User.findOne({ where: { email: adminEmail } });
-    if (!adminUser) {
-      const adminHash = await bcrypt.hash('Admin123!', 12);
-      adminUser = await User.create({ name: 'Admin', email: adminEmail, passwordHash: adminHash, role: 'admin' });
-      console.log(`  ✅ Created admin account: ${adminEmail}`);
-    } else if (adminUser.role !== 'admin') {
-      await adminUser.update({ role: 'admin' });
-      console.log(`  🔄 Promoted ${adminEmail} to admin`);
-    } else {
-      console.log(`  ⏭  Admin account already exists: ${adminEmail}`);
-    }
-
-    const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
-    let created = 0;
-
-    for (let i = 0; i < SEED_ORGS.length; i++) {
-      const orgData = SEED_ORGS[i];
-
-      // Check if org already exists by name
-      const existing = await Organization.findOne({ where: { name: orgData.name } });
-      if (existing) {
-        // Update registrationNo if missing
-        if (!existing.registrationNo && orgData.registrationNo) {
-          await existing.update({ registrationNo: orgData.registrationNo });
-          console.log(`  🔄 Updated "${orgData.name}" with registrationNo ${orgData.registrationNo}`);
-        } else {
-          console.log(`  ⏭  Skipping "${orgData.name}" (already exists)`);
-        }
-        continue;
-      }
-
-      // Create a seed user for this org
-      const emailSlug = orgData.name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20);
-      const seedEmail = `seed-${emailSlug}@catalyze.dev`;
-
-      let user = await User.findOne({ where: { email: seedEmail } });
-      if (!user) {
-        user = await User.create({
-          email: seedEmail,
-          name: `${orgData.name} Admin`,
-          passwordHash,
-        });
-      }
-
-      await Organization.create({
-        ...orgData,
-        ownerId: user.id,
-      });
-
-      created++;
-      console.log(`  ✅ Created "${orgData.name}" (${orgData.category})`);
-    }
-
-    console.log(`\nDone! Created ${created} organizations (${SEED_ORGS.length - created} already existed).`);
-    console.log(`Seed accounts use password: ${SEED_PASSWORD}`);
+    await seedDatabase();
   } catch (error) {
     console.error('Seed failed:', error);
     process.exit(1);
@@ -545,4 +550,7 @@ async function seed() {
   }
 }
 
-seed();
+// Only run standalone when executed directly (not imported)
+if (require.main === module) {
+  main();
+}
