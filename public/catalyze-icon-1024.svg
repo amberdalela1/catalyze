@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a3c4a0"/>
+      <stop offset="100%" style="stop-color:#6b8e6e"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <!-- Handshake icon -->
+  <g transform="translate(512,380)" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left hand reaching right -->
+    <path d="M-200,40 L-100,40 L0,-40 L100,40"/>
+    <!-- Right hand reaching left -->
+    <path d="M200,40 L100,40"/>
+    <!-- Grip area -->
+    <circle cx="0" cy="-40" r="8" fill="#fff" stroke="none"/>
+  </g>
+  <!-- CATALYZE text -->
+  <text x="512" y="680" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="148" font-weight="bold" letter-spacing="8">
+    <tspan fill="#ffffff">CATALY</tspan><tspan fill="#d4774a">ZE</tspan>
+  </text>
+  <!-- Tagline -->
+  <text x="512" y="760" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="52" fill="#f5f0e3" letter-spacing="6">
+    CONNECT · COLLABORATE · GROW
+  </text>
+</svg>
