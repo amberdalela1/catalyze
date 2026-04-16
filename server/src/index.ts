@@ -46,18 +46,17 @@ if (isProd) {
 app.use(helmet());
 
 // Allow multiple origins for CORS (comma-separated in env)
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,capacitor://localhost').split(',');
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,capacitor://localhost').split(',').map(o => o.trim());
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin.trim())) {
       callback(null, true);
     } else {
-      // Pass false to reject, but don't throw to avoid 500
       callback(null, false);
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200, // For legacy browser/Capacitor compatibility
+  optionsSuccessStatus: 200,
 }));
 
 // Rate limiting
