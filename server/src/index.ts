@@ -49,14 +49,15 @@ app.use(helmet());
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,capacitor://localhost').split(',');
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Pass false to reject, but don't throw to avoid 500
+      callback(null, false);
     }
   },
   credentials: true,
+  optionsSuccessStatus: 200, // For legacy browser/Capacitor compatibility
 }));
 
 // Rate limiting
