@@ -20,7 +20,7 @@
   justify-content: space-around;
   height: var(--tab-bar-height);
   padding-bottom: var(--safe-area-bottom);
-  background-color: var(--color-gray-100);
+  background-color: var(--color-gray-50);
   border-top: 1px solid var(--color-gray-200);
   z-index: 100;
 }
