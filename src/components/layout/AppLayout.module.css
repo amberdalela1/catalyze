@@ -30,7 +30,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: var(--space-2) var(--space-3);
+  padding: calc(var(--space-2) + 6px) var(--space-3) var(--space-2) var(--space-3); /* extra top padding for indicator */
   color: var(--color-gray-400);
   font-size: 10px;
   font-weight: var(--font-weight-medium);
@@ -52,7 +52,7 @@
 .tabActive::before {
   content: '';
   position: absolute;
-  top: -1px;
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 32px;
