@@ -44,8 +44,18 @@ if (isProd) {
 
 // Security middleware
 app.use(helmet());
+
+// Allow multiple origins for CORS (comma-separated in env)
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,capacitor://localhost').split(',');
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
