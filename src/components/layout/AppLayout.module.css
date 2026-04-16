@@ -6,7 +6,7 @@
 
 .content {
   flex: 1;
-  padding-bottom: calc(var(--tab-bar-height) + var(--safe-area-bottom));
+  padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
 }
 
