@@ -10,6 +10,11 @@
   overflow-y: auto;
 }
 
+/* iOS-specific: add extra bottom padding for safe area */
+body.ios-platform .content {
+  padding-bottom: calc(var(--tab-bar-height) + var(--safe-area-bottom) + env(safe-area-inset-bottom, 20px));
+}
+
 .tabBar {
   position: fixed;
   bottom: 0;
