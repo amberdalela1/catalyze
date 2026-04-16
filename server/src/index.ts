@@ -49,6 +49,7 @@ app.use(helmet());
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000,capacitor://localhost').split(',').map(o => o.trim());
 app.use(cors({
   origin: (origin, callback) => {
+    console.log('CORS check:', { origin, allowedOrigins });
     if (!origin || allowedOrigins.includes(origin.trim())) {
       callback(null, true);
     } else {
