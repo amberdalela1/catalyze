@@ -188,10 +188,47 @@ router.get('/posts', authenticate, async (req: AuthRequest, res: Response): Prom
   }
 });
 
-// All posts
+// All posts = union of connected + favorites + recommended
 router.get('/posts/all', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const org = await Organization.findOne({ where: { ownerId: req.userId } });
+    const orgIdSet = new Set<number>();
+
+    // Include own org
+    if (org) {
+      orgIdSet.add(org.id);
+
+      // Connected orgs
+      const partnerships = await Partnership.findAll({
+        where: {
+          status: 'accepted',
+          [Op.or]: [{ requesterId: org.id }, { targetId: org.id }],
+        },
+      });
+      partnerships.forEach((p) => orgIdSet.add(p.requesterId === org.id ? p.targetId : p.requesterId));
+
+      // Recommended orgs
+      const recs = await FeedRecommendation.findAll({
+        where: { orgId: org.id },
+        attributes: ['recommendedOrgId'],
+      });
+      recs.forEach((r) => orgIdSet.add(r.recommendedOrgId));
+    }
+
+    // Favorited orgs
+    const favorites = await Favorite.findAll({
+      where: { userId: req.userId },
+      attributes: ['orgId'],
+    });
+    favorites.forEach((f) => orgIdSet.add(f.orgId));
+
+    if (orgIdSet.size === 0) {
+      res.json([]);
+      return;
+    }
+
     const posts = await Post.findAll({
+      where: { orgId: { [Op.in]: [...orgIdSet] } },
       include: postIncludes,
       order: [['createdAt', 'DESC']],
       limit: 50,
