@@ -191,13 +191,16 @@ export async function getRecommendations(
     }
   }
 
-  // Normalize scores to 0-100 scale
+  // Normalize scores to 0-100 scale and filter out weak matches
   const maxScore = topCandidates[0]?.score || 1;
-  return topCandidates.slice(0, 5).map(s => ({
-    orgId: s.orgId,
-    score: Math.round((s.score / maxScore) * 100),
-    reason: s.reason,
-  }));
+  return topCandidates
+    .slice(0, 5)
+    .map(s => ({
+      orgId: s.orgId,
+      score: Math.round((s.score / maxScore) * 100),
+      reason: s.reason,
+    }))
+    .filter(s => s.score >= 40); // Drop orgs that score less than 40% of the best match
 }
 
 /** AI-only scoring (used as Phase 2 enhancement). */
