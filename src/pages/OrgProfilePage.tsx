@@ -29,6 +29,8 @@ interface OrgDetail {
   category: string;
   city?: string;
   state?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   website?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -118,6 +120,26 @@ export default function OrgProfilePage() {
           </p>
         )}
       </div>
+
+      {/* Location map */}
+      {org.latitude && org.longitude && (
+        <div style={{
+          margin: '0 var(--space-4) var(--space-4)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          border: '1.5px solid var(--color-gray-300)',
+          height: '150px',
+        }}>
+          <iframe
+            title="Organization location"
+            width="100%"
+            height="150"
+            style={{ border: 0 }}
+            loading="lazy"
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=${org.longitude - 0.15},${org.latitude - 0.1},${org.longitude + 0.15},${org.latitude + 0.1}&layer=mapnik&marker=${org.latitude},${org.longitude}`}
+          />
+        </div>
+      )}
 
       <div style={{ padding: '0 var(--space-4) var(--space-4)' }}>
         {!org.isOwner && org.partnershipStatus === 'none' && (
