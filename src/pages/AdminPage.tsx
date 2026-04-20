@@ -79,6 +79,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [confirm, setConfirm] = useState<{ type: string; id: number; name: string } | null>(null);
+  const [postAs, setPostAs] = useState<{ orgId: number; orgName: string } | null>(null);
+  const [postForm, setPostForm] = useState({ title: '', content: '', type: 'tip' });
+  const [postSubmitting, setPostSubmitting] = useState(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -184,6 +187,24 @@ export default function AdminPage() {
 
   function formatDate(d: string) {
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  async function handlePostAs() {
+    if (!postAs || !postForm.title.trim() || !postForm.content.trim()) return;
+    setPostSubmitting(true);
+    try {
+      await api.post('/admin/posts', {
+        orgId: postAs.orgId,
+        title: postForm.title,
+        content: postForm.content,
+        type: postForm.type,
+      });
+      setPostAs(null);
+      setPostForm({ title: '', content: '', type: 'tip' });
+      loadStats();
+      if (tab === 'posts') loadPosts(search);
+    } catch { /* ignore */ }
+    setPostSubmitting(false);
   }
 
   return (
@@ -307,6 +328,12 @@ export default function AdminPage() {
               </div>
               <div className={styles.itemActions}>
                 <button
+                  className={styles.actionBtn}
+                  onClick={() => { setPostAs({ orgId: org.id, orgName: org.name }); setPostForm({ title: '', content: '', type: 'tip' }); }}
+                >
+                  Post as
+                </button>
+                <button
                   className={org.canPost ? styles.actionBtn : styles.restrictedBtn}
                   onClick={() => handleToggleRestriction(org, 'canPost')}
                   title={org.canPost ? 'Revoke posting rights' : 'Restore posting rights'}
@@ -398,6 +425,56 @@ export default function AdminPage() {
             <div className={styles.confirmActions}>
               <button className={styles.confirmCancel} onClick={() => setConfirm(null)}>Cancel</button>
               <button className={styles.confirmDelete} onClick={handleDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Post-as dialog */}
+      {postAs && (
+        <div className={styles.confirmOverlay} onClick={() => setPostAs(null)}>
+          <div className={styles.confirmDialog} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className={styles.confirmTitle}>Post as {postAs.orgName}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginTop: 'var(--space-3)' }}>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                {(['tip', 'experience', 'announcement'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={postForm.type === t ? styles.restrictedBtn : styles.actionBtn}
+                    style={{ flex: 1, textTransform: 'capitalize' }}
+                    onClick={() => setPostForm((f) => ({ ...f, type: t }))}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <input
+                className={styles.searchInput}
+                placeholder="Title"
+                value={postForm.title}
+                onChange={(e) => setPostForm((f) => ({ ...f, title: e.target.value }))}
+                style={{ width: '100%' }}
+              />
+              <textarea
+                className={styles.searchInput}
+                placeholder="Content..."
+                value={postForm.content}
+                onChange={(e) => setPostForm((f) => ({ ...f, content: e.target.value }))}
+                rows={4}
+                style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div className={styles.confirmActions}>
+              <button className={styles.confirmCancel} onClick={() => setPostAs(null)}>Cancel</button>
+              <button
+                className={styles.actionBtn}
+                style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                onClick={handlePostAs}
+                disabled={postSubmitting || !postForm.title.trim() || !postForm.content.trim()}
+              >
+                {postSubmitting ? 'Posting...' : 'Post'}
+              </button>
             </div>
           </div>
         </div>

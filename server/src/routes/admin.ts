@@ -202,6 +202,37 @@ router.delete('/posts/:id', async (req: AuthRequest, res: Response): Promise<voi
   }
 });
 
+// Create post on behalf of an org
+router.post('/posts', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { orgId, title, content, type } = req.body;
+    if (!orgId || !title || !content || !type) {
+      res.status(400).json({ message: 'orgId, title, content, and type are required' });
+      return;
+    }
+    if (!['tip', 'experience', 'announcement'].includes(type)) {
+      res.status(400).json({ message: 'Invalid post type' });
+      return;
+    }
+    const org = await Organization.findByPk(orgId);
+    if (!org) {
+      res.status(404).json({ message: 'Organization not found' });
+      return;
+    }
+    const post = await Post.create({
+      orgId: org.id,
+      authorId: org.ownerId,
+      title,
+      content,
+      type,
+    });
+    res.status(201).json(post);
+  } catch (error) {
+    console.error('Admin create post error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // ── Partnerships ──
 router.delete('/partnerships/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
