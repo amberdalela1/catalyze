@@ -210,11 +210,14 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    // Auto-geocode if city or state changed
+    // Auto-geocode if city/state changed OR coordinates are missing
     const cityChanged = req.body.city && req.body.city !== org.city;
     const stateChanged = req.body.state && req.body.state !== org.state;
-    if (cityChanged || stateChanged) {
-      const coords = await geocode(req.body.city || org.city, req.body.state || org.state);
+    const missingCoords = !org.latitude || !org.longitude;
+    const effectiveCity = req.body.city || org.city;
+    const effectiveState = req.body.state || org.state;
+    if ((cityChanged || stateChanged || missingCoords) && (effectiveCity || effectiveState)) {
+      const coords = await geocode(effectiveCity, effectiveState);
       if (coords) {
         req.body.latitude = coords.latitude;
         req.body.longitude = coords.longitude;
