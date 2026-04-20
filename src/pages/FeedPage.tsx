@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import Card, { CardBody, CardHeader, CardFooter } from '../components/ui/Card';
@@ -6,7 +6,7 @@ import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import { LoadingCenter, Spinner } from '../components/ui/Loading';
 import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
-import { HeartIcon, MegaphoneIcon, PlusIcon, CheckCircleIcon } from '../components/ui/Icons';
+import { HeartIcon, MegaphoneIcon, PlusIcon, CheckCircleIcon, TagIcon, LocationIcon, BuildingIcon } from '../components/ui/Icons';
 import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
 import styles from './FeedPage.module.css';
@@ -17,10 +17,12 @@ interface Post {
   content: string;
   type: string;
   createdAt: string;
+  orgId?: number;
   author: { name: string; avatarUrl?: string };
   organization: { id: number; name: string; logoUrl?: string };
   media?: MediaItem[];
   _count?: { reactions: number };
+  recommendationReason?: string | null;
 }
 
 type FeedTab = 'all' | 'connected' | 'favorites' | 'recommended';
@@ -177,6 +179,33 @@ export default function FeedPage() {
                       <p className={styles.postTime}>
                         {new Date(post.createdAt).toLocaleDateString()}
                       </p>
+                      {post.recommendationReason && (
+                        <div className={styles.matchSignals}>
+                          {post.recommendationReason.split(' · ').map((signal, i) => {
+                            let icon: React.ReactNode | null = null;
+                            let label = '';
+                            if (signal.startsWith('Same category')) {
+                              icon = <TagIcon size={11} />;
+                              label = 'Same category';
+                            } else if (signal.includes('location')) {
+                              icon = <LocationIcon size={11} />;
+                              label = 'Nearby';
+                            } else if (signal.includes('org size')) {
+                              icon = <BuildingIcon size={11} />;
+                              label = signal.includes('Similar') ? 'Same size' : 'Similar size';
+                            } else if (signal.includes('offer') || signal.includes('need')) {
+                              icon = <HandshakeIcon size={11} />;
+                              label = 'Resource match';
+                            }
+                            if (!icon) return null;
+                            return (
+                              <span key={i} className={styles.matchSignal} title={signal}>
+                                {icon} {label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className={styles.cardActions}>

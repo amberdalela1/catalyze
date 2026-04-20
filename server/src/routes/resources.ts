@@ -64,8 +64,16 @@ router.put(
         );
       }
 
-      // Invalidate recommendation cache so feed regenerates with updated resources
-      await FeedRecommendation.destroy({ where: { orgId: org.id } });
+      // Invalidate recommendation cache for this org (as requester) AND for all orgs
+      // that have this org as a candidate — resource changes affect both directions.
+      await FeedRecommendation.destroy({
+        where: {
+          [Op.or]: [
+            { orgId: org.id },
+            { recommendedOrgId: org.id },
+          ],
+        },
+      });
 
       const updated = await OrgResource.findAll({
         where: { orgId: org.id, direction },

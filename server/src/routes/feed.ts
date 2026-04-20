@@ -283,7 +283,7 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
 
     let recs = await FeedRecommendation.findAll({
       where: { orgId: org.id },
-      attributes: ['recommendedOrgId'],
+      attributes: ['recommendedOrgId', 'reason'],
     });
 
     // Auto-generate recommendations if none exist
@@ -319,7 +319,7 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
           );
           recs = await FeedRecommendation.findAll({
             where: { orgId: org.id },
-            attributes: ['recommendedOrgId'],
+            attributes: ['recommendedOrgId', 'reason'],
           });
         }
       }
@@ -331,6 +331,9 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
       return;
     }
 
+    // Map orgId → reason so we can attach it to each post
+    const reasonByOrgId = new Map(recs.map((r) => [r.recommendedOrgId, r.reason]));
+
     const posts = await Post.findAll({
       where: { orgId: { [Op.in]: recOrgIds } },
       include: postIncludes,
@@ -338,7 +341,11 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
       limit: 50,
     });
 
-    res.json(await enrichPosts(posts));
+    const enriched = await enrichPosts(posts);
+    res.json(enriched.map((p: any) => ({
+      ...p,
+      recommendationReason: reasonByOrgId.get(p.orgId) ?? null,
+    })));
   } catch (error) {
     console.error('Recommended posts error:', error);
     res.json([]);
