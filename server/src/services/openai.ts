@@ -165,7 +165,7 @@ export async function getRecommendations(
 
   // ── Phase 2: AI enhancement for top candidates ──
   // Only call AI to refine/re-rank the top 10 and produce nicer reasons
-  const topCandidates = scored.slice(0, 20);
+  const topCandidates = scored.slice(0, 200);
 
   if (openai) {
     try {
@@ -196,13 +196,13 @@ export async function getRecommendations(
   // Normalize scores to 0-100 scale and filter out weak matches
   const maxScore = topCandidates[0]?.score || 1;
   return topCandidates
-    .slice(0, 20)
+    .slice(0, 200)
     .map(s => ({
       orgId: s.orgId,
       score: Math.round((s.score / maxScore) * 100),
       reason: s.reason,
     }))
-    .filter(s => s.score >= 40); // Drop orgs that score less than 40% of the best match
+    .filter(s => s.score >= 15); // Drop orgs that score less than 40% of the best match
 }
 
 /** AI-only scoring (used as Phase 2 enhancement). */
