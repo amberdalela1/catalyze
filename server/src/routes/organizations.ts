@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { body } from 'express-validator';
 import { Op } from 'sequelize';
-import { Organization, User, Media, OrgResource } from '../models';
+import { Organization, User, Media, OrgResource, FeedRecommendation } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
 
@@ -183,6 +183,10 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
     }
 
     await org.update(req.body);
+
+    // Invalidate recommendation cache so feed regenerates with updated profile
+    await FeedRecommendation.destroy({ where: { orgId: org.id } });
+
     res.json(org);
   } catch (error) {
     console.error('Update org error:', error);

@@ -27,12 +27,19 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
       return;
     }
 
-    // Check for cached recommendations (less than 24 hours old)
+    // Check for cached recommendations (less than 24 hours old and newer than last org update)
+    const forceRefresh = req.query.refresh === '1';
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const cached = await FeedRecommendation.findAll({
+    const cacheMinTime = org.updatedAt > oneDayAgo ? org.updatedAt : oneDayAgo;
+
+    if (forceRefresh) {
+      await FeedRecommendation.destroy({ where: { orgId: org.id } });
+    }
+
+    const cached = !forceRefresh ? await FeedRecommendation.findAll({
       where: {
         orgId: org.id,
-        generatedAt: { [Op.gt]: oneDayAgo },
+        generatedAt: { [Op.gt]: cacheMinTime },
       },
       include: [
         {
@@ -43,7 +50,7 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
       ],
       order: [['score', 'DESC']],
       limit: 5,
-    });
+    }) : [];
 
     if (cached.length > 0) {
       const results = cached.map((rec) => ({

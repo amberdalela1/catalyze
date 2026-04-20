@@ -1,6 +1,6 @@
 import { Router, Response } from 'express';
 import { body } from 'express-validator';
-import { OrgResource, Organization } from '../models';
+import { OrgResource, Organization, FeedRecommendation } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
 import { RESOURCE_CATEGORIES, STANDARD_RESOURCES } from '../config/resources';
@@ -63,6 +63,9 @@ router.put(
           }))
         );
       }
+
+      // Invalidate recommendation cache so feed regenerates with updated resources
+      await FeedRecommendation.destroy({ where: { orgId: org.id } });
 
       const updated = await OrgResource.findAll({
         where: { orgId: org.id, direction },
