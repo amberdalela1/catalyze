@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '../.env' });
 
 import { sequelize } from './config/database';
-import { User, Organization } from './models';
+import { User, Organization, Post } from './models';
 import bcrypt from 'bcryptjs';
 
 const SEED_PASSWORD = 'Catalyze2026!';
@@ -516,9 +516,18 @@ export async function seedDatabase() {
       });
     }
 
-    await Organization.create({
+    const org = await Organization.create({
       ...orgData,
       ownerId: user.id,
+    });
+
+    // Create a "joined" post for the feed
+    await Post.create({
+      orgId: org.id,
+      authorId: user.id,
+      title: `${orgData.name} joined Catalyze`,
+      content: orgData.mission,
+      type: 'joined',
     });
 
     created++;

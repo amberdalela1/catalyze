@@ -224,6 +224,24 @@
   line-height: 1.5;
 }
 
+.joinedPost {
+  text-align: center;
+  padding: var(--space-2) 0;
+}
+
+.joinedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  background-color: var(--color-primary-50);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-2);
+}
+
 .postActions {
   display: flex;
   gap: var(--space-4);

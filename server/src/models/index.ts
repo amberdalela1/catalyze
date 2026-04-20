@@ -182,7 +182,7 @@ export class Post extends Model {
   declare title: string;
   declare content: string;
   declare mediaUrl: string | null;
-  declare type: 'tip' | 'experience' | 'announcement';
+  declare type: 'tip' | 'experience' | 'announcement' | 'joined';
   declare createdAt: Date;
 }
 

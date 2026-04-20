@@ -7,7 +7,7 @@ import Badge from '../components/ui/Badge';
 import { LoadingCenter, Spinner } from '../components/ui/Loading';
 import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
 import type { ReactNode } from 'react';
-import { HeartIcon, MegaphoneIcon, PlusIcon, TagIcon, LocationIcon, BuildingIcon } from '../components/ui/Icons';
+import { HeartIcon, MegaphoneIcon, PlusIcon, TagIcon, LocationIcon, BuildingIcon, CheckCircleIcon } from '../components/ui/Icons';
 import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
 import styles from './FeedPage.module.css';
@@ -272,15 +272,26 @@ export default function FeedPage() {
                   </div>
                 </CardHeader>
                 <CardBody>
-                  <Badge variant={post.type === 'tip' ? 'success' : post.type === 'experience' ? 'primary' : 'neutral'}>
-                    {post.type}
-                  </Badge>
-                  <h3 className={styles.postTitle}>{post.title}</h3>
-                  <p className={styles.postContent}>{post.content}</p>
-                  {post.media && post.media.length > 0 && (
-                    <div style={{ marginTop: 'var(--space-3)' }}>
-                      <MediaCollage media={post.media} />
+                  {post.type === 'joined' ? (
+                    <div className={styles.joinedPost}>
+                      <div className={styles.joinedBadge}>
+                        <CheckCircleIcon size={14} /> Joined Catalyze
+                      </div>
+                      <p className={styles.postContent}>{post.content}</p>
                     </div>
+                  ) : (
+                    <>
+                      <Badge variant={post.type === 'tip' ? 'success' : post.type === 'experience' ? 'primary' : 'neutral'}>
+                        {post.type}
+                      </Badge>
+                      <h3 className={styles.postTitle}>{post.title}</h3>
+                      <p className={styles.postContent}>{post.content}</p>
+                      {post.media && post.media.length > 0 && (
+                        <div style={{ marginTop: 'var(--space-3)' }}>
+                          <MediaCollage media={post.media} />
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardBody>
                 <CardFooter>
@@ -346,15 +357,26 @@ export default function FeedPage() {
                 </div>
               </CardHeader>
               <CardBody>
-                <Badge variant={post.type === 'tip' ? 'success' : post.type === 'experience' ? 'primary' : 'neutral'}>
-                  {post.type}
-                </Badge>
-                <h3 className={styles.postTitle}>{post.title}</h3>
-                <p className={styles.postContent}>{post.content}</p>
-                {post.media && post.media.length > 0 && (
-                  <div style={{ marginTop: 'var(--space-3)' }}>
-                    <MediaCollage media={post.media} />
+                {post.type === 'joined' ? (
+                  <div className={styles.joinedPost}>
+                    <div className={styles.joinedBadge}>
+                      <CheckCircleIcon size={14} /> Joined Catalyze
+                    </div>
+                    <p className={styles.postContent}>{post.content}</p>
                   </div>
+                ) : (
+                  <>
+                    <Badge variant={post.type === 'tip' ? 'success' : post.type === 'experience' ? 'primary' : 'neutral'}>
+                      {post.type}
+                    </Badge>
+                    <h3 className={styles.postTitle}>{post.title}</h3>
+                    <p className={styles.postContent}>{post.content}</p>
+                    {post.media && post.media.length > 0 && (
+                      <div style={{ marginTop: 'var(--space-3)' }}>
+                        <MediaCollage media={post.media} />
+                      </div>
+                    )}
+                  </>
                 )}
               </CardBody>
               <CardFooter>
