@@ -87,6 +87,7 @@ export default function MyOrgPage() {
   const [scraping, setScraping] = useState(false);
   const [editing, setEditing] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [offeredResources, setOfferedResources] = useState<string[]>([]);
   const [neededResources, setNeededResources] = useState<string[]>([]);
@@ -143,15 +144,17 @@ export default function MyOrgPage() {
   };
 
   const uploadMedia = async (orgId: number) => {
-    if (mediaFiles.length === 0) return;
+    if (mediaFiles.length === 0 && mediaUrls.length === 0) return;
     setUploadingMedia(true);
     try {
       const formData = new FormData();
       formData.append('orgId', String(orgId));
       mediaFiles.forEach((f) => formData.append('files', f));
+      if (mediaUrls.length > 0) formData.append('urls', JSON.stringify(mediaUrls));
       const uploaded = await api.upload<MediaItem[]>('/media/upload', formData);
       setOrg(prev => ({ ...prev, media: [...(prev.media || []), ...uploaded] }));
       setMediaFiles([]);
+      setMediaUrls([]);
     } catch { /* ignore upload errors */ }
     finally { setUploadingMedia(false); }
   };
@@ -555,6 +558,8 @@ export default function MyOrgPage() {
               <MediaUploader
                 files={mediaFiles}
                 onFilesChange={setMediaFiles}
+                urls={mediaUrls}
+                onUrlsChange={setMediaUrls}
                 existingMedia={org.media || []}
                 onRemoveExisting={handleRemoveExistingMedia}
                 label="Brand Photos & Videos"

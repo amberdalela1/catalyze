@@ -144,6 +144,8 @@ function MediaViewer({ media, startIndex, onClose }: MediaViewerProps) {
 interface MediaUploaderProps {
   files: File[];
   onFilesChange: (files: File[]) => void;
+  urls?: string[];
+  onUrlsChange?: (urls: string[]) => void;
   existingMedia?: MediaItem[];
   onRemoveExisting?: (id: number) => void;
   maxFiles?: number;
@@ -153,17 +155,21 @@ interface MediaUploaderProps {
 export function MediaUploader({
   files,
   onFilesChange,
+  urls = [],
+  onUrlsChange,
   existingMedia = [],
   onRemoveExisting,
   maxFiles = 10,
   label = 'Add Photos / Videos',
 }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [urlError, setUrlError] = useState('');
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const newFiles = Array.from(e.target.files);
-    const totalExisting = existingMedia.length + files.length;
+    const totalExisting = existingMedia.length + files.length + urls.length;
     const allowed = newFiles.slice(0, maxFiles - totalExisting);
     onFilesChange([...files, ...allowed]);
     // Reset input so same file can be re-selected
@@ -174,7 +180,35 @@ export function MediaUploader({
     onFilesChange(files.filter((_, i) => i !== index));
   };
 
-  const totalCount = existingMedia.length + files.length;
+  const addUrl = () => {
+    setUrlError('');
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        setUrlError('Only http/https URLs are allowed');
+        return;
+      }
+    } catch {
+      setUrlError('Enter a valid URL');
+      return;
+    }
+    if (urls.includes(trimmed)) {
+      setUrlError('URL already added');
+      return;
+    }
+    onUrlsChange?.([...urls, trimmed]);
+    setUrlInput('');
+  };
+
+  const removeUrl = (index: number) => {
+    onUrlsChange?.(urls.filter((_, i) => i !== index));
+  };
+
+  const isVideo = (url: string) => /\.(mp4|mov|webm)(\?|$)/i.test(url);
+
+  const totalCount = existingMedia.length + files.length + urls.length;
 
   return (
     <div>
@@ -183,23 +217,64 @@ export function MediaUploader({
       </label>
 
       {totalCount < maxFiles && (
-        <div className={styles.uploadArea} onClick={() => inputRef.current?.click()}>
-          <div className={styles.uploadIcon}><CameraIcon size={32} /></div>
-          <div className={styles.uploadText}>
-            Tap to select photos or videos ({totalCount}/{maxFiles})
+        <>
+          <div className={styles.uploadArea} onClick={() => inputRef.current?.click()}>
+            <div className={styles.uploadIcon}><CameraIcon size={32} /></div>
+            <div className={styles.uploadText}>
+              Tap to select photos or videos ({totalCount}/{maxFiles})
+            </div>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              onChange={handleFileSelect}
+              style={{ display: 'none' }}
+            />
           </div>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-        </div>
+
+          {onUrlsChange && (
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+              <input
+                type="url"
+                placeholder="Or paste image/video URL"
+                value={urlInput}
+                onChange={(e) => { setUrlInput(e.target.value); setUrlError(''); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }}
+                style={{
+                  flex: 1,
+                  padding: 'var(--space-2) var(--space-3)',
+                  fontSize: 'var(--font-size-sm)',
+                  border: '1.5px solid var(--color-gray-300)',
+                  borderRadius: 'var(--radius-lg)',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={addUrl}
+                style={{
+                  padding: 'var(--space-2) var(--space-3)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  backgroundColor: 'var(--color-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius-lg)',
+                  cursor: 'pointer',
+                }}
+              >
+                Add
+              </button>
+            </div>
+          )}
+          {urlError && (
+            <p style={{ color: 'var(--color-error, #e53e3e)', fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-1)' }}>{urlError}</p>
+          )}
+        </>
       )}
 
-      {(existingMedia.length > 0 || files.length > 0) && (
+      {(existingMedia.length > 0 || files.length > 0 || urls.length > 0) && (
         <div className={styles.uploadPreviewGrid}>
           {existingMedia.map((item) => (
             <div key={item.id} className={styles.uploadPreview}>
@@ -221,6 +296,16 @@ export function MediaUploader({
                 <img src={URL.createObjectURL(file)} alt="" />
               )}
               <button className={styles.removeBtn} onClick={() => removeFile(i)}><CloseIcon size={14} /></button>
+            </div>
+          ))}
+          {urls.map((url, i) => (
+            <div key={`url-${i}`} className={styles.uploadPreview}>
+              {isVideo(url) ? (
+                <video src={url} muted preload="metadata" />
+              ) : (
+                <img src={url} alt="" />
+              )}
+              <button className={styles.removeBtn} onClick={() => removeUrl(i)}><CloseIcon size={14} /></button>
             </div>
           ))}
         </div>

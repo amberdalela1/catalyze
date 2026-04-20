@@ -22,6 +22,7 @@ export default function CreatePostPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,11 +32,12 @@ export default function CreatePostPage() {
       const post = await api.post<{ id: number; orgId: number }>('/posts', { title, content, type });
 
       // Upload media if any
-      if (mediaFiles.length > 0) {
+      if (mediaFiles.length > 0 || mediaUrls.length > 0) {
         const formData = new FormData();
         formData.append('orgId', String(post.orgId));
         formData.append('postId', String(post.id));
         mediaFiles.forEach((f) => formData.append('files', f));
+        if (mediaUrls.length > 0) formData.append('urls', JSON.stringify(mediaUrls));
         await api.upload('/media/upload', formData);
       }
 
@@ -118,6 +120,8 @@ export default function CreatePostPage() {
               <MediaUploader
                 files={mediaFiles}
                 onFilesChange={setMediaFiles}
+                urls={mediaUrls}
+                onUrlsChange={setMediaUrls}
                 label="Photos & Videos"
               />
 

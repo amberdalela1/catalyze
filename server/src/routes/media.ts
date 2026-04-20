@@ -54,12 +54,25 @@ router.post(
   async (req: AuthRequest, res: Response): Promise<void> => {
     try {
       const files = req.files as Express.Multer.File[];
-      if (!files || files.length === 0) {
-        res.status(400).json({ message: 'No files uploaded' });
-        return;
+      const { orgId, postId } = req.body;
+
+      // Parse URLs from body (sent as JSON string or repeated field)
+      let urls: string[] = [];
+      if (req.body.urls) {
+        try { urls = JSON.parse(req.body.urls); } catch { urls = []; }
+        // Validate each URL
+        urls = urls.filter((u: string) => {
+          try {
+            const parsed = new URL(u);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+          } catch { return false; }
+        });
       }
 
-      const { orgId, postId } = req.body;
+      if ((!files || files.length === 0) && urls.length === 0) {
+        res.status(400).json({ message: 'No files or URLs provided' });
+        return;
+      }
 
       // Verify ownership
       if (orgId) {
@@ -70,23 +83,47 @@ router.post(
         }
       }
 
-      const mediaRecords = await Promise.all(
-        files.map(async (file, index) => {
-          let url: string;
-          if (useS3) {
-            url = await uploadToS3(file.buffer, file.originalname, file.mimetype);
-          } else {
-            url = `/uploads/${file.filename}`;
-          }
-          return Media.create({
-            orgId: orgId ? Number(orgId) : null,
-            postId: postId ? Number(postId) : null,
-            url,
-            type: file.mimetype.startsWith('video/') ? 'video' : 'image',
-            displayOrder: index,
-          });
-        })
-      );
+      const mediaRecords: any[] = [];
+      let orderIndex = 0;
+
+      // Process uploaded files
+      if (files && files.length > 0) {
+        const fileRecords = await Promise.all(
+          files.map(async (file) => {
+            let url: string;
+            if (useS3) {
+              url = await uploadToS3(file.buffer, file.originalname, file.mimetype);
+            } else {
+              url = `/uploads/${file.filename}`;
+            }
+            return Media.create({
+              orgId: orgId ? Number(orgId) : null,
+              postId: postId ? Number(postId) : null,
+              url,
+              type: file.mimetype.startsWith('video/') ? 'video' : 'image',
+              displayOrder: orderIndex++,
+            });
+          })
+        );
+        mediaRecords.push(...fileRecords);
+      }
+
+      // Process URLs
+      if (urls.length > 0) {
+        const urlRecords = await Promise.all(
+          urls.map(async (externalUrl: string) => {
+            const isVid = /\.(mp4|mov|webm)(\?|$)/i.test(externalUrl);
+            return Media.create({
+              orgId: orgId ? Number(orgId) : null,
+              postId: postId ? Number(postId) : null,
+              url: externalUrl,
+              type: isVid ? 'video' : 'image',
+              displayOrder: orderIndex++,
+            });
+          })
+        );
+        mediaRecords.push(...urlRecords);
+      }
 
       res.status(201).json(mediaRecords);
     } catch (error) {
