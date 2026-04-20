@@ -31,6 +31,8 @@ interface Organization {
   category: string;
   city: string;
   state: string;
+  latitude?: number | null;
+  longitude?: number | null;
   website: string;
   contactEmail: string;
   contactPhone: string;
@@ -249,6 +251,26 @@ export default function MyOrgPage() {
               )}
             </div>
 
+            {/* Location map preview */}
+            {org.latitude && org.longitude && (
+              <div style={{
+                borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden',
+                border: '1.5px solid var(--color-gray-300)',
+                height: '150px',
+                marginBottom: 'var(--space-4)',
+              }}>
+                <iframe
+                  title="Organization location"
+                  width="100%"
+                  height="150"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${org.longitude - 0.15},${org.latitude - 0.1},${org.longitude + 0.15},${org.latitude + 0.1}&layer=mapnik&marker=${org.latitude},${org.longitude}`}
+                />
+              </div>
+            )}
+
             {org.media && org.media.length > 0 && (
               <div style={{ marginBottom: 'var(--space-4)', maxHeight: '120px', overflow: 'hidden', borderRadius: 'var(--radius-lg)' }}>
                 <MediaCollage media={org.media} />
@@ -450,6 +472,38 @@ export default function MyOrgPage() {
                   onChange={(e) => setOrg({ ...org, state: e.target.value })}
                 />
               </div>
+
+              {/* Location preview */}
+              {org.latitude && org.longitude && (
+                <div style={{
+                  borderRadius: 'var(--radius-lg)',
+                  overflow: 'hidden',
+                  border: '1.5px solid var(--color-gray-300)',
+                  height: '150px',
+                  position: 'relative',
+                }}>
+                  <iframe
+                    title="Organization location"
+                    width="100%"
+                    height="150"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${org.longitude - 0.15},${org.latitude - 0.1},${org.longitude + 0.15},${org.latitude + 0.1}&layer=mapnik&marker=${org.latitude},${org.longitude}`}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '8px',
+                    backgroundColor: 'rgba(255,255,255,0.9)',
+                    padding: '2px 8px',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--color-gray-600)',
+                  }}>
+                    <LocationIcon size={12} /> {org.city}, {org.state}
+                  </div>
+                </div>
+              )}
 
               <TextInput
                 label="Website"
