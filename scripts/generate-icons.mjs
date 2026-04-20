@@ -1,14 +1,14 @@
 /**
- * Generate iOS App Icon PNGs from SVG
+ * Generate iOS App Icon PNGs from source icon
  * 
  * Prerequisites: npm install sharp
  * Usage: node scripts/generate-icons.mjs
  * 
- * This creates all required iOS icon sizes in the ios app icon asset catalog.
+ * Resizes resources/icon/icon-1024.png to all required iOS icon sizes.
  */
 
 import sharp from 'sharp';
-import { mkdirSync, writeFileSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -29,23 +29,18 @@ const iosSizes = [
   { size: 1024, scales: [1], idiom: 'ios-marketing' },
 ];
 
-// Simple SVG that creates a proper app icon (no rounded corners - iOS adds them)
-const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#a3c4a0"/>
-      <stop offset="100%" style="stop-color:#6b8e6e"/>
-    </linearGradient>
-  </defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <text x="512" y="620" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="520" font-weight="bold" fill="white">C</text>
-</svg>`;
-
 async function generateIcons() {
   const outputDir = join(rootDir, 'resources', 'icon');
-  mkdirSync(outputDir, { recursive: true });
+  const sourceIcon = join(outputDir, 'icon-1024.png');
 
-  const svgBuffer = Buffer.from(iconSvg);
+  if (!existsSync(sourceIcon)) {
+    console.error('Source icon not found: ' + sourceIcon);
+    console.error('Place a 1024x1024 PNG at resources/icon/icon-1024.png first.');
+    process.exit(1);
+  }
+
+  const source = sharp(sourceIcon).flatten({ background: '#ffffff' });
+
   const images = [];
   const contentsImages = [];
 
@@ -56,7 +51,8 @@ async function generateIcons() {
       const outputPath = join(outputDir, filename);
 
       images.push(
-        sharp(svgBuffer)
+        source
+          .clone()
           .resize(pixels, pixels)
           .png()
           .toFile(outputPath)
@@ -74,10 +70,6 @@ async function generateIcons() {
 
   await Promise.all(images);
 
-  // Also generate a standalone 1024x1024 for App Store Connect
-  await sharp(svgBuffer).resize(1024, 1024).png().toFile(join(outputDir, 'icon-1024.png'));
-  console.log('  ✓ icon-1024.png (1024x1024)');
-
   // Generate Contents.json for Xcode asset catalog
   const contents = {
     images: contentsImages,
@@ -86,9 +78,15 @@ async function generateIcons() {
   writeFileSync(join(outputDir, 'Contents.json'), JSON.stringify(contents, null, 2));
   console.log('  ✓ Contents.json');
 
-  console.log(`\nAll icons generated in: ${outputDir}`);
-  console.log('Copy these into ios/App/App/Assets.xcassets/AppIcon.appiconset/ after running npx cap add ios');
+  // Copy 1024x1024 to iOS asset catalog
+  const xcodeIconDir = join(rootDir, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');
+  if (existsSync(xcodeIconDir)) {
+    await source.clone().resize(1024, 1024).png().toFile(join(xcodeIconDir, 'AppIcon-512@2x.png'));
+    console.log('  ✓ Copied to ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');
+  }
+
+  console.log(`\nAll icons generated from: ${sourceIcon}`);
 }
 
-console.log('Generating iOS app icons...\n');
+console.log('Generating iOS app icons from source PNG...\n');
 generateIcons().catch(console.error);
