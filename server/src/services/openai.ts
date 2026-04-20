@@ -46,7 +46,8 @@ function haversineDistance(
 
 /**
  * Geo score: 0–30 points.
- * < 10 mi → 30, < 25 mi → 25, < 50 mi → 20, < 100 mi → 15, < 250 mi → 10, else 5.
+ * < 50 mi → 30, < 150 mi → 25, < 500 mi → 20, < 1000 mi → 15,
+ * < 2500 mi → 10, < 5000 mi → 5, else 2.
  * No coords → 5
  */
 function geoScore(userOrg: OrgProfile, candidate: OrgProfile): number {
@@ -54,12 +55,13 @@ function geoScore(userOrg: OrgProfile, candidate: OrgProfile): number {
     return 5;
   }
   const d = haversineDistance(userOrg.latitude, userOrg.longitude, candidate.latitude, candidate.longitude);
-  if (d < 10) return 30;
-  if (d < 25) return 25;
-  if (d < 50) return 20;
-  if (d < 100) return 15;
-  if (d < 250) return 10;
-  return 5;
+  if (d < 50) return 30;
+  if (d < 150) return 25;
+  if (d < 500) return 20;
+  if (d < 1000) return 15;
+  if (d < 2500) return 10;
+  if (d < 5000) return 5;
+  return 2;
 }
 
 /**
@@ -163,7 +165,7 @@ export async function getRecommendations(
 
   // ── Phase 2: AI enhancement for top candidates ──
   // Only call AI to refine/re-rank the top 10 and produce nicer reasons
-  const topCandidates = scored.slice(0, 10);
+  const topCandidates = scored.slice(0, 20);
 
   if (openai) {
     try {
@@ -194,7 +196,7 @@ export async function getRecommendations(
   // Normalize scores to 0-100 scale and filter out weak matches
   const maxScore = topCandidates[0]?.score || 1;
   return topCandidates
-    .slice(0, 5)
+    .slice(0, 20)
     .map(s => ({
       orgId: s.orgId,
       score: Math.round((s.score / maxScore) * 100),

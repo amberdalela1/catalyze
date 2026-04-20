@@ -49,7 +49,7 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
         },
       ],
       order: [['score', 'DESC']],
-      limit: 5,
+      limit: 20,
     }) : [];
 
     if (cached.length > 0) {
