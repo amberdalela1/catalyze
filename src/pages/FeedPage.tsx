@@ -55,6 +55,7 @@ export default function FeedPage() {
     () => (sessionStorage.getItem('feedTab') as FeedTab) || 'all'
   );
   const [msgStatus, setMsgStatus] = useState<Record<number, MsgStatus>>({});
+  const [favSet, setFavSet] = useState<Set<number>>(new Set());
 
   const fetchMsgStatus = useCallback(async (orgIds: number[]) => {
     const unique = [...new Set(orgIds)].filter(Boolean);
@@ -64,6 +65,26 @@ export default function FeedPage() {
       setMsgStatus(prev => ({ ...prev, ...data }));
     } catch { /* best effort */ }
   }, []);
+
+  const fetchFavorites = useCallback(async () => {
+    try {
+      const favs = await api.get<{ orgId: number }[]>('/favorites');
+      setFavSet(new Set(favs.map(f => f.orgId)));
+    } catch { /* best effort */ }
+  }, []);
+
+  const toggleFavorite = useCallback(async (orgId: number) => {
+    const isFav = favSet.has(orgId);
+    try {
+      if (isFav) {
+        await api.delete(`/favorites/${orgId}`);
+        setFavSet(prev => { const next = new Set(prev); next.delete(orgId); return next; });
+      } else {
+        await api.post(`/favorites/${orgId}`, {});
+        setFavSet(prev => new Set(prev).add(orgId));
+      }
+    } catch { /* best effort */ }
+  }, [favSet]);
 
   const fetchPosts = useCallback(async (tab: FeedTab) => {
     const data = await api.get<Post[]>(TAB_ENDPOINTS[tab]).catch(() => []);
@@ -75,7 +96,7 @@ export default function FeedPage() {
   useEffect(() => {
     async function loadFeed() {
       try {
-        await fetchPosts(activeTab);
+        await Promise.all([fetchPosts(activeTab), fetchFavorites()]);
       } finally {
         setLoading(false);
       }
@@ -202,8 +223,12 @@ export default function FeedPage() {
               </CardBody>
               <CardFooter>
                 <div className={styles.postActions}>
-                  <button className={styles.postAction}>
-                    <HeartIcon size={16} /> {post._count?.reactions || 0}
+                  <button
+                    className={`${styles.postAction} ${favSet.has(post.organization.id) ? styles.postActionActive : ''}`}
+                    onClick={() => toggleFavorite(post.organization.id)}
+                    title={favSet.has(post.organization.id) ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <HeartIcon size={16} filled={favSet.has(post.organization.id)} />
                   </button>
                 </div>
               </CardFooter>
