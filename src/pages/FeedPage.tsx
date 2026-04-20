@@ -173,9 +173,9 @@ export default function FeedPage() {
                       onClick={() => navigate(`/org/${post.organization.id}`)}
                     />
                     <div>
-                      <p className={styles.postAuthor}>{post.author.name}</p>
+                      <p className={styles.postAuthor}>{post.organization.name}</p>
                       <p className={styles.postTime}>
-                        {post.organization.name} · {new Date(post.createdAt).toLocaleDateString()}
+                        {new Date(post.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

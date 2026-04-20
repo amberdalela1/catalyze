@@ -163,6 +163,14 @@ export default function MyOrgPage() {
     } catch { /* ignore */ }
   };
 
+  const handleDeleteAllMedia = async () => {
+    if (!org.media || org.media.length === 0) return;
+    try {
+      await Promise.all(org.media.map(m => api.delete(`/media/${m.id}`)));
+      setOrg(prev => ({ ...prev, media: [] }));
+    } catch { /* ignore */ }
+  };
+
   const saveResources = async (orgId: number) => {
     try {
       await api.put('/resources', { orgId, direction: 'offer', resources: offeredResources });
@@ -556,6 +564,24 @@ export default function MyOrgPage() {
                 <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-500)' }}>
                   Uploading media...
                 </p>
+              )}
+
+              {org.media && org.media.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteAllMedia}
+                  style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--color-error, #e53e3e)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    marginTop: 'calc(-1 * var(--space-2))',
+                  }}
+                >
+                  Delete all photos
+                </button>
               )}
 
               {/* Organization Size */}
