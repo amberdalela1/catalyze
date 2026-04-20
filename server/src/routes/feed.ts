@@ -58,6 +58,8 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
         name: (rec as FeedRecommendation & { recommendedOrg: Organization }).recommendedOrg.name,
         mission: (rec as FeedRecommendation & { recommendedOrg: Organization }).recommendedOrg.mission,
         category: (rec as FeedRecommendation & { recommendedOrg: Organization }).recommendedOrg.category,
+        city: (rec as FeedRecommendation & { recommendedOrg: Organization }).recommendedOrg.city,
+        state: (rec as FeedRecommendation & { recommendedOrg: Organization }).recommendedOrg.state,
         logoUrl: (rec as FeedRecommendation & { recommendedOrg: Organization }).recommendedOrg.logoUrl,
         reason: rec.reason,
       }));
@@ -121,6 +123,8 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
           name: recOrg.name,
           mission: recOrg.mission,
           category: recOrg.category,
+          city: recOrg.city,
+          state: recOrg.state,
           logoUrl: recOrg.logoUrl,
           reason: r.reason,
         };

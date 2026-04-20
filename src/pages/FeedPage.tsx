@@ -6,7 +6,8 @@ import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import { LoadingCenter, Spinner } from '../components/ui/Loading';
 import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
-import { SparkleIcon, HeartIcon, MegaphoneIcon, PlusIcon } from '../components/ui/Icons';
+import type { ReactNode } from 'react';
+import { SparkleIcon, HeartIcon, MegaphoneIcon, PlusIcon, TagIcon, LocationIcon, BuildingIcon } from '../components/ui/Icons';
 import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
 import styles from './FeedPage.module.css';
@@ -16,6 +17,8 @@ interface Recommendation {
   name: string;
   mission: string;
   category: string;
+  city?: string;
+  state?: string;
   logoUrl?: string;
   reason: string;
 }
@@ -198,7 +201,36 @@ export default function FeedPage() {
                     </div>
                   </div>
                   <p className={styles.postContent}>{rec.mission}</p>
-                  <p className={styles.recReason}><SparkleIcon size={16} /> {rec.reason}</p>
+                  {rec.city && (
+                    <p className={styles.recLocation}>
+                      <LocationIcon size={14} /> {rec.city}{rec.state ? `, ${rec.state}` : ''}
+                    </p>
+                  )}
+                  <div className={styles.recSignals}>
+                    {rec.reason.split(' · ').map((signal, i) => {
+                      let icon: ReactNode | null = null;
+                      let label = '';
+                      if (signal.startsWith('Same category')) {
+                        icon = <TagIcon size={12} />;
+                        label = 'Same category';
+                      } else if (signal.includes('location')) {
+                        icon = <LocationIcon size={12} />;
+                        label = 'Nearby';
+                      } else if (signal.includes('org size')) {
+                        icon = <BuildingIcon size={12} />;
+                        label = signal.includes('Similar') ? 'Same size' : 'Similar size';
+                      } else if (signal.includes('offer') || signal.includes('need')) {
+                        icon = <HandshakeIcon size={12} />;
+                        label = 'Resource match';
+                      }
+                      if (!icon) return null;
+                      return (
+                        <span key={i} className={styles.recSignal} title={signal}>
+                          {icon} {label}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </CardBody>
               </Card>
             ))}
