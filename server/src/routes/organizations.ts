@@ -7,6 +7,26 @@ import { handleValidationErrors } from '../middleware/validate';
 
 const router = Router();
 
+/** Look up lat/lng from city + state using OpenStreetMap Nominatim (free, no key). */
+async function geocode(city?: string, state?: string): Promise<{ latitude: number; longitude: number } | null> {
+  if (!city && !state) return null;
+  const q = [city, state, 'United States'].filter(Boolean).join(', ');
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `q=${encodeURIComponent(q)}&format=json&limit=1`;
+    const resp = await fetch(url, {
+      headers: { 'User-Agent': 'CatalyzePro/1.0 (non-profit-connector)' },
+    });
+    const data = await resp.json() as Array<{ lat: string; lon: string }>;
+    if (data.length > 0) {
+      return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+    }
+  } catch (err) {
+    console.warn('Geocoding failed:', (err as Error).message);
+  }
+  return null;
+}
+
 // Get my organization
 router.get('/mine', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -48,10 +68,18 @@ router.post(
         return;
       }
 
-      const org = await Organization.create({
-        ...req.body,
-        ownerId: req.userId,
-      });
+      const orgData = { ...req.body, ownerId: req.userId };
+
+      // Auto-geocode if city/state provided but no coordinates
+      if ((orgData.city || orgData.state) && !orgData.latitude) {
+        const coords = await geocode(orgData.city, orgData.state);
+        if (coords) {
+          orgData.latitude = coords.latitude;
+          orgData.longitude = coords.longitude;
+        }
+      }
+
+      const org = await Organization.create(orgData);
 
       res.status(201).json(org);
     } catch (error) {
@@ -180,6 +208,17 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
     if (org.ownerId !== req.userId && req.userRole !== 'admin') {
       res.status(403).json({ message: 'Not authorized' });
       return;
+    }
+
+    // Auto-geocode if city or state changed
+    const cityChanged = req.body.city && req.body.city !== org.city;
+    const stateChanged = req.body.state && req.body.state !== org.state;
+    if (cityChanged || stateChanged) {
+      const coords = await geocode(req.body.city || org.city, req.body.state || org.state);
+      if (coords) {
+        req.body.latitude = coords.latitude;
+        req.body.longitude = coords.longitude;
+      }
     }
 
     await org.update(req.body);
