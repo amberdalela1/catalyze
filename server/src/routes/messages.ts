@@ -33,25 +33,30 @@ router.get('/inbox', authenticate, async (req: AuthRequest, res: Response): Prom
       return;
     }
 
-    // Get latest message per conversation partner
-    const conversations = await sequelize.query(`
-      SELECT
-        m.*,
-        CASE WHEN m.[senderOrgId] = :orgId THEN m.[receiverOrgId] ELSE m.[senderOrgId] END AS otherOrgId
-      FROM messages m
-      INNER JOIN (
-        SELECT
-          CASE WHEN [senderOrgId] = :orgId THEN [receiverOrgId] ELSE [senderOrgId] END AS partnerId,
-          MAX(id) AS maxId
-        FROM messages
-        WHERE [senderOrgId] = :orgId OR [receiverOrgId] = :orgId
-        GROUP BY CASE WHEN [senderOrgId] = :orgId THEN [receiverOrgId] ELSE [senderOrgId] END
-      ) latest ON m.id = latest.maxId
-      ORDER BY m.[createdAt] DESC
-    `, {
-      replacements: { orgId: org.id },
-      type: 'SELECT' as any,
+    // Get all messages for this org
+    const allMessages = await Message.findAll({
+      where: {
+        [Op.or]: [
+          { senderOrgId: org.id },
+          { receiverOrgId: org.id },
+        ],
+      },
+      order: [['createdAt', 'DESC']],
+      raw: true,
     }) as any[];
+
+    // Group by conversation partner and get latest message per partner
+    const conversationMap = new Map<number, any>();
+    allMessages.forEach((msg: any) => {
+      const otherOrgId = msg.senderOrgId === org.id ? msg.receiverOrgId : msg.senderOrgId;
+      
+      // Keep only the latest message per partner (already sorted DESC by createdAt)
+      if (!conversationMap.has(otherOrgId)) {
+        conversationMap.set(otherOrgId, { ...msg, otherOrgId });
+      }
+    });
+
+    const conversations = Array.from(conversationMap.values());
 
     // Enrich with org details and connected status
     const otherOrgIds = conversations.map((c: any) => c.otherOrgId);
