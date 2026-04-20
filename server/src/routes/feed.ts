@@ -279,10 +279,49 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
       return;
     }
 
-    const recs = await FeedRecommendation.findAll({
+    let recs = await FeedRecommendation.findAll({
       where: { orgId: org.id },
       attributes: ['recommendedOrgId'],
     });
+
+    // Auto-generate recommendations if none exist
+    if (recs.length === 0) {
+      const partnerships = await Partnership.findAll({
+        where: {
+          status: 'accepted',
+          [Op.or]: [{ requesterId: org.id }, { targetId: org.id }],
+        },
+      });
+      const excludeIds = [
+        org.id,
+        ...partnerships.map((p) => (p.requesterId === org.id ? p.targetId : p.requesterId)),
+      ];
+      const candidates = await Organization.findAll({
+        where: { id: { [Op.notIn]: excludeIds } },
+        attributes: ['id', 'name', 'mission', 'category', 'city', 'state', 'logoUrl', 'latitude', 'longitude', 'size'],
+        limit: 50,
+      });
+      if (candidates.length > 0) {
+        const userProfile = await buildOrgWithResources(org);
+        const candidateProfiles = await Promise.all(candidates.map(buildOrgWithResources));
+        const aiResults = await getRecommendations(userProfile, candidateProfiles);
+        if (aiResults.length > 0) {
+          await FeedRecommendation.bulkCreate(
+            aiResults.map((r) => ({
+              orgId: org.id,
+              recommendedOrgId: r.orgId,
+              score: r.score,
+              reason: r.reason,
+              generatedAt: new Date(),
+            }))
+          );
+          recs = await FeedRecommendation.findAll({
+            where: { orgId: org.id },
+            attributes: ['recommendedOrgId'],
+          });
+        }
+      }
+    }
 
     const recOrgIds = recs.map((r) => r.recommendedOrgId);
     if (recOrgIds.length === 0) {
