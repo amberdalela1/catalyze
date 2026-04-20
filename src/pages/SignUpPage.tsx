@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { signUpWithEmail } from '../services/auth';
-import { isNative } from '../utils/platform';
 import TextInput from '../components/ui/TextInput';
 import Button from '../components/ui/Button';
-import { MobileIcon } from '../components/ui/Icons';
 
 function ChevronLeftIcon({ size = 20 }: { size?: number }) {
   return (
@@ -104,29 +102,6 @@ export default function SignUpPage() {
           {loading ? 'Creating account...' : 'Sign Up'}
         </Button>
       </form>
-
-      <div className={styles.divider}>
-        <span className={styles.dividerLine} />
-        <span>or continue with</span>
-        <span className={styles.dividerLine} />
-      </div>
-
-      <div className={styles.socialButtons}>
-        <button className={styles.socialBtn} type="button">
-          <span className={styles.socialIcon}>G</span>
-          Google
-        </button>
-        {isNative() && (
-          <button className={styles.socialBtn} type="button">
-            <span className={styles.socialIcon}></span>
-            Apple
-          </button>
-        )}
-        <button className={styles.socialBtn} type="button">
-          <span className={styles.socialIcon}><MobileIcon size={18} /></span>
-          Phone Number
-        </button>
-      </div>
 
       <div className={styles.footer}>
         Already have an account?{' '}
