@@ -70,6 +70,7 @@ export default function SearchPage() {
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [connectedIds, setConnectedIds] = useState<Set<number>>(new Set());
   const [recommendedIds, setRecommendedIds] = useState<Set<number>>(new Set());
+  const [recommendedOrder, setRecommendedOrder] = useState<number[]>([]);
 
   const fetchMsgStatus = useCallback(async (orgIds: number[]) => {
     const unique = [...new Set(orgIds)].filter(Boolean);
@@ -107,7 +108,10 @@ export default function SearchPage() {
       )))
       .catch(() => {});
     api.get<{ id: number }[]>('/feed/recommendations')
-      .then(recs => setRecommendedIds(new Set(recs.map(r => r.id))))
+      .then(recs => {
+        setRecommendedIds(new Set(recs.map(r => r.id)));
+        setRecommendedOrder(recs.map(r => r.id));
+      })
       .catch(() => {});
   }, []);
 
@@ -117,7 +121,8 @@ export default function SearchPage() {
     ? results.filter(o => favoriteIds.has(o.id))
     : viewFilter === 'connected'
     ? results.filter(o => connectedIds.has(o.id))
-    : results.filter(o => recommendedIds.has(o.id));
+    : results.filter(o => recommendedIds.has(o.id))
+        .sort((a, b) => recommendedOrder.indexOf(a.id) - recommendedOrder.indexOf(b.id));
 
   useEffect(() => {
     const timeout = setTimeout(search, 300);
@@ -227,6 +232,11 @@ export default function SearchPage() {
                   {org.city && (
                     <p className={styles.orgLocation}>
                       <LocationIcon size={14} /> {org.city}{org.state ? `, ${org.state}` : ''}
+                    </p>
+                  )}
+                  {org.mission && (
+                    <p className={styles.orgMission}>
+                      {org.mission.length > 120 ? org.mission.slice(0, 120) + '…' : org.mission}
                     </p>
                   )}
                 </div>

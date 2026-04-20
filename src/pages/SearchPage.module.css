@@ -232,6 +232,13 @@
   margin-top: var(--space-1);
 }
 
+.orgMission {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  margin-top: var(--space-1);
+  line-height: 1.4;
+}
+
 .emptySearch {
   text-align: center;
   padding: var(--space-12) var(--space-4);
