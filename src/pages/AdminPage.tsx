@@ -144,6 +144,7 @@ export default function AdminPage() {
     else if (tab === 'organizations') loadOrgs();
     else if (tab === 'posts') loadPosts();
     else if (tab === 'messages') loadMessages();
+    else if (tab === 'testing') loadOrgs();
   }, [tab, loadUsers, loadOrgs, loadPosts, loadMessages]);
 
   useEffect(() => {
@@ -315,7 +316,7 @@ export default function AdminPage() {
       )}
 
       {/* Search bar for list tabs */}
-      {tab !== 'dashboard' && (
+      {(tab === 'users' || tab === 'organizations' || tab === 'posts' || tab === 'messages') && (
         <div className={styles.searchBar}>
           <div className={styles.searchWrapper}>
             <span className={styles.searchIcon}><SearchIcon size={16} /></span>
@@ -381,6 +382,7 @@ export default function AdminPage() {
                   {!org.canMessage && <span className={styles.restrictedBadge}>No Messages</span>}
                 </div>
                 <div className={styles.itemSub}>
+                  {`ID: ${org.id}`} ·
                   {org.category}
                   {org.city && ` · ${org.city}, ${org.state}`}
                   {org.owner && ` · ${org.owner.name}`}
@@ -492,27 +494,37 @@ export default function AdminPage() {
 
           <div className={styles.formSection}>
             <h3>Message As</h3>
-            <input
-              type="number"
-              placeholder="Sender Org ID"
+            <select
               value={messageForm.senderOrgId}
               onChange={(e) => setMessageForm((f) => ({ ...f, senderOrgId: e.target.value }))}
-              className={styles.searchInput}
+              className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            />
-            <input
-              type="number"
-              placeholder="Receiver Org ID"
+            >
+              <option value="">Select sender org</option>
+              {orgs.map((org) => (
+                <option key={org.id} value={String(org.id)}>
+                  {`${org.name} (#${org.id})`}
+                </option>
+              ))}
+            </select>
+            <select
               value={messageForm.receiverOrgId}
               onChange={(e) => setMessageForm((f) => ({ ...f, receiverOrgId: e.target.value }))}
-              className={styles.searchInput}
+              className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            />
+            >
+              <option value="">Select receiver org</option>
+              {orgs.map((org) => (
+                <option key={org.id} value={String(org.id)}>
+                  {`${org.name} (#${org.id})`}
+                </option>
+              ))}
+            </select>
             <textarea
               placeholder="Message content..."
               value={messageForm.content}
               onChange={(e) => setMessageForm((f) => ({ ...f, content: e.target.value }))}
-              className={styles.searchInput}
+              className={styles.formInput}
               rows={3}
               style={{ marginBottom: 'var(--space-2)', resize: 'vertical' }}
             />
@@ -528,22 +540,32 @@ export default function AdminPage() {
 
           <div className={styles.formSection}>
             <h3>Connect As</h3>
-            <input
-              type="number"
-              placeholder="Requester Org ID"
+            <select
               value={connectForm.requesterId}
               onChange={(e) => setConnectForm((f) => ({ ...f, requesterId: e.target.value }))}
-              className={styles.searchInput}
+              className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            />
-            <input
-              type="number"
-              placeholder="Target Org ID"
+            >
+              <option value="">Select requester org</option>
+              {orgs.map((org) => (
+                <option key={org.id} value={String(org.id)}>
+                  {`${org.name} (#${org.id})`}
+                </option>
+              ))}
+            </select>
+            <select
               value={connectForm.targetId}
               onChange={(e) => setConnectForm((f) => ({ ...f, targetId: e.target.value }))}
-              className={styles.searchInput}
+              className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            />
+            >
+              <option value="">Select target org</option>
+              {orgs.map((org) => (
+                <option key={org.id} value={String(org.id)}>
+                  {`${org.name} (#${org.id})`}
+                </option>
+              ))}
+            </select>
             <button
               className={styles.actionBtn}
               onClick={handleConnectAs}
@@ -561,9 +583,10 @@ export default function AdminPage() {
               placeholder="Partnership ID"
               value={acceptForm.partnershipId}
               onChange={(e) => setAcceptForm((f) => ({ ...f, partnershipId: e.target.value }))}
-              className={styles.searchInput}
+              className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
             />
+            <div className={styles.formHint}>Tip: Open the Partners tab to find pending partnership IDs.</div>
             <button
               className={styles.actionBtn}
               onClick={handleAcceptAs}
