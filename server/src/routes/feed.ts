@@ -222,13 +222,15 @@ router.get('/posts/all', authenticate, async (req: AuthRequest, res: Response): 
     });
     favorites.forEach((f) => orgIdSet.add(f.orgId));
 
-    if (orgIdSet.size === 0) {
-      res.json([]);
-      return;
-    }
-
     const posts = await Post.findAll({
-      where: { orgId: { [Op.in]: [...orgIdSet] } },
+      where: {
+        [Op.or]: [
+          // Posts from connected/favorited/recommended orgs
+          ...(orgIdSet.size > 0 ? [{ orgId: { [Op.in]: [...orgIdSet] } }] : []),
+          // All system-generated 'joined' posts visible to everyone
+          { type: 'joined' },
+        ],
+      },
       include: postIncludes,
       order: [['createdAt', 'DESC']],
       limit: 50,
