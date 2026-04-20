@@ -169,10 +169,12 @@ router.get('/posts', authenticate, async (req: AuthRequest, res: Response): Prom
       },
     });
 
-    const connectedOrgIds = [
-      org.id,
-      ...partnerships.map((p) => (p.requesterId === org.id ? p.targetId : p.requesterId)),
-    ];
+    const connectedOrgIds = partnerships.map((p) => (p.requesterId === org.id ? p.targetId : p.requesterId));
+
+    if (connectedOrgIds.length === 0) {
+      res.json([]);
+      return;
+    }
 
     const posts = await Post.findAll({
       where: { orgId: { [Op.in]: connectedOrgIds } },
