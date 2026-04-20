@@ -7,7 +7,7 @@ import Badge from '../components/ui/Badge';
 import { LoadingCenter, Spinner } from '../components/ui/Loading';
 import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
 import type { ReactNode } from 'react';
-import { SparkleIcon, HeartIcon, MegaphoneIcon, PlusIcon, TagIcon, LocationIcon, BuildingIcon } from '../components/ui/Icons';
+import { HeartIcon, MegaphoneIcon, PlusIcon, TagIcon, LocationIcon, BuildingIcon } from '../components/ui/Icons';
 import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
 import styles from './FeedPage.module.css';
