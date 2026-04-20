@@ -282,4 +282,116 @@ router.delete('/messages/:id', async (req: AuthRequest, res: Response): Promise<
   }
 });
 
+// ── Impersonation / Testing ──
+// Send a message as a specific org (for testing)
+router.post('/message-as', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { senderOrgId, receiverOrgId, content } = req.body;
+    if (!senderOrgId || !receiverOrgId || !content) {
+      res.status(400).json({ message: 'senderOrgId, receiverOrgId, and content are required' });
+      return;
+    }
+
+    const senderOrg = await Organization.findByPk(senderOrgId);
+    const receiverOrg = await Organization.findByPk(receiverOrgId);
+    if (!senderOrg || !receiverOrg) {
+      res.status(404).json({ message: 'Organization not found' });
+      return;
+    }
+
+    if (senderOrgId === receiverOrgId) {
+      res.status(400).json({ message: 'Cannot message yourself' });
+      return;
+    }
+
+    const message = await Message.create({
+      senderOrgId,
+      receiverOrgId,
+      content,
+    });
+
+    res.status(201).json(message);
+  } catch (error) {
+    console.error('Admin message-as error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Send a partnership request as a specific org
+router.post('/connect-as', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { requesterId, targetId } = req.body;
+    if (!requesterId || !targetId) {
+      res.status(400).json({ message: 'requesterId and targetId are required' });
+      return;
+    }
+
+    const requesterOrg = await Organization.findByPk(requesterId);
+    const targetOrg = await Organization.findByPk(targetId);
+    if (!requesterOrg || !targetOrg) {
+      res.status(404).json({ message: 'Organization not found' });
+      return;
+    }
+
+    if (requesterId === targetId) {
+      res.status(400).json({ message: 'Cannot connect to yourself' });
+      return;
+    }
+
+    // Check if partnership already exists
+    const existing = await Partnership.findOne({
+      where: {
+        [Op.or]: [
+          { requesterId, targetId },
+          { requesterId: targetId, targetId: requesterId },
+        ],
+      },
+    });
+
+    if (existing) {
+      res.status(400).json({ message: 'Partnership already exists' });
+      return;
+    }
+
+    const partnership = await Partnership.create({
+      requesterId,
+      targetId,
+      status: 'pending',
+    });
+
+    res.status(201).json(partnership);
+  } catch (error) {
+    console.error('Admin connect-as error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Accept a partnership request as a specific org
+router.post('/accept-as', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { partnershipId } = req.body;
+    if (!partnershipId) {
+      res.status(400).json({ message: 'partnershipId is required' });
+      return;
+    }
+
+    const partnership = await Partnership.findByPk(partnershipId);
+    if (!partnership) {
+      res.status(404).json({ message: 'Partnership not found' });
+      return;
+    }
+
+    if (partnership.status !== 'pending') {
+      res.status(400).json({ message: `Partnership is already ${partnership.status}` });
+      return;
+    }
+
+    await partnership.update({ status: 'accepted' });
+    res.json(partnership);
+  } catch (error) {
+    console.error('Admin accept-as error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;

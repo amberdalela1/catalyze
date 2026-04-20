@@ -5,7 +5,7 @@ import { LoadingCenter } from '../components/ui/Loading';
 import { SearchIcon } from '../components/ui/Icons';
 import styles from './AdminPage.module.css';
 
-type Tab = 'dashboard' | 'users' | 'organizations' | 'posts' | 'messages';
+type Tab = 'dashboard' | 'users' | 'organizations' | 'posts' | 'messages' | 'testing';
 
 interface Stats {
   users: number;
@@ -67,6 +67,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'organizations', label: 'Orgs' },
   { key: 'posts', label: 'Posts' },
   { key: 'messages', label: 'Messages' },
+  { key: 'testing', label: 'Testing' },
 ];
 
 export default function AdminPage() {
@@ -82,6 +83,13 @@ export default function AdminPage() {
   const [postAs, setPostAs] = useState<{ orgId: number; orgName: string } | null>(null);
   const [postForm, setPostForm] = useState({ title: '', content: '', type: 'tip' });
   const [postSubmitting, setPostSubmitting] = useState(false);
+  
+  // Testing/impersonation forms
+  const [messageForm, setMessageForm] = useState({ senderOrgId: '', receiverOrgId: '', content: '' });
+  const [connectForm, setConnectForm] = useState({ requesterId: '', targetId: '' });
+  const [acceptForm, setAcceptForm] = useState({ partnershipId: '' });
+  const [testingSubmitting, setTestingSubmitting] = useState(false);
+  const [testingMessage, setTestingMessage] = useState<string | null>(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -205,6 +213,58 @@ export default function AdminPage() {
       if (tab === 'posts') loadPosts(search);
     } catch { /* ignore */ }
     setPostSubmitting(false);
+  }
+
+  async function handleMessageAs() {
+    if (!messageForm.senderOrgId || !messageForm.receiverOrgId || !messageForm.content.trim()) return;
+    setTestingSubmitting(true);
+    try {
+      await api.post('/admin/message-as', {
+        senderOrgId: Number(messageForm.senderOrgId),
+        receiverOrgId: Number(messageForm.receiverOrgId),
+        content: messageForm.content,
+      });
+      setMessageForm({ senderOrgId: '', receiverOrgId: '', content: '' });
+      setTestingMessage('Message sent successfully');
+      setTimeout(() => setTestingMessage(null), 3000);
+    } catch (err) {
+      setTestingMessage(`Error: ${err instanceof Error ? err.message : 'Failed to send message'}`);
+    }
+    setTestingSubmitting(false);
+  }
+
+  async function handleConnectAs() {
+    if (!connectForm.requesterId || !connectForm.targetId) return;
+    setTestingSubmitting(true);
+    try {
+      await api.post('/admin/connect-as', {
+        requesterId: Number(connectForm.requesterId),
+        targetId: Number(connectForm.targetId),
+      });
+      setConnectForm({ requesterId: '', targetId: '' });
+      setTestingMessage('Connection request sent successfully');
+      setTimeout(() => setTestingMessage(null), 3000);
+    } catch (err) {
+      setTestingMessage(`Error: ${err instanceof Error ? err.message : 'Failed to send request'}`);
+    }
+    setTestingSubmitting(false);
+  }
+
+  async function handleAcceptAs() {
+    if (!acceptForm.partnershipId) return;
+    setTestingSubmitting(true);
+    try {
+      await api.post('/admin/accept-as', {
+        partnershipId: Number(acceptForm.partnershipId),
+      });
+      setAcceptForm({ partnershipId: '' });
+      setTestingMessage('Connection accepted successfully');
+      setTimeout(() => setTestingMessage(null), 3000);
+      if (tab === 'testing') loadMessages();
+    } catch (err) {
+      setTestingMessage(`Error: ${err instanceof Error ? err.message : 'Failed to accept'}`);
+    }
+    setTestingSubmitting(false);
   }
 
   return (
@@ -411,6 +471,108 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Testing / Impersonation */}
+      {tab === 'testing' && (
+        <div className={styles.testingPanel}>
+          {testingMessage && (
+            <div style={{
+              padding: 'var(--space-3)',
+              marginBottom: 'var(--space-3)',
+              backgroundColor: testingMessage.startsWith('Error') ? '#fee' : '#efe',
+              border: `1px solid ${testingMessage.startsWith('Error') ? '#fcc' : '#cfc'}`,
+              borderRadius: 'var(--radius)',
+              color: testingMessage.startsWith('Error') ? '#c33' : '#3c3',
+            }}>
+              {testingMessage}
+            </div>
+          )}
+
+          <div className={styles.formSection}>
+            <h3>Message As</h3>
+            <input
+              type="number"
+              placeholder="Sender Org ID"
+              value={messageForm.senderOrgId}
+              onChange={(e) => setMessageForm((f) => ({ ...f, senderOrgId: e.target.value }))}
+              className={styles.searchInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <input
+              type="number"
+              placeholder="Receiver Org ID"
+              value={messageForm.receiverOrgId}
+              onChange={(e) => setMessageForm((f) => ({ ...f, receiverOrgId: e.target.value }))}
+              className={styles.searchInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <textarea
+              placeholder="Message content..."
+              value={messageForm.content}
+              onChange={(e) => setMessageForm((f) => ({ ...f, content: e.target.value }))}
+              className={styles.searchInput}
+              rows={3}
+              style={{ marginBottom: 'var(--space-2)', resize: 'vertical' }}
+            />
+            <button
+              className={styles.actionBtn}
+              onClick={handleMessageAs}
+              disabled={testingSubmitting || !messageForm.senderOrgId || !messageForm.receiverOrgId || !messageForm.content.trim()}
+              style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+            >
+              {testingSubmitting ? 'Sending...' : 'Send Message'}
+            </button>
+          </div>
+
+          <div className={styles.formSection}>
+            <h3>Connect As</h3>
+            <input
+              type="number"
+              placeholder="Requester Org ID"
+              value={connectForm.requesterId}
+              onChange={(e) => setConnectForm((f) => ({ ...f, requesterId: e.target.value }))}
+              className={styles.searchInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <input
+              type="number"
+              placeholder="Target Org ID"
+              value={connectForm.targetId}
+              onChange={(e) => setConnectForm((f) => ({ ...f, targetId: e.target.value }))}
+              className={styles.searchInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <button
+              className={styles.actionBtn}
+              onClick={handleConnectAs}
+              disabled={testingSubmitting || !connectForm.requesterId || !connectForm.targetId}
+              style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+            >
+              {testingSubmitting ? 'Connecting...' : 'Send Connection Request'}
+            </button>
+          </div>
+
+          <div className={styles.formSection}>
+            <h3>Accept Connection As</h3>
+            <input
+              type="number"
+              placeholder="Partnership ID"
+              value={acceptForm.partnershipId}
+              onChange={(e) => setAcceptForm((f) => ({ ...f, partnershipId: e.target.value }))}
+              className={styles.searchInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <button
+              className={styles.actionBtn}
+              onClick={handleAcceptAs}
+              disabled={testingSubmitting || !acceptForm.partnershipId}
+              style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+            >
+              {testingSubmitting ? 'Accepting...' : 'Accept Connection'}
+            </button>
+          </div>
         </div>
       )}
 
