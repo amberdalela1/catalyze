@@ -246,8 +246,8 @@ export default function SearchPage() {
                   {viewFilter === 'recommended' && recommendedReasons[org.id] && (
                     <div className={styles.matchSignals}>
                       {recommendedReasons[org.id].split(' · ').map((signal, i) => {
-                        let icon: ReactNode = <TagIcon size={12} />;
-                        let label = signal;
+                        let icon: ReactNode | null = null;
+                        let label = '';
                         if (signal.startsWith('Same category')) {
                           icon = <TagIcon size={12} />;
                           label = 'Same category';
@@ -261,6 +261,7 @@ export default function SearchPage() {
                           icon = <HandshakeIcon size={12} />;
                           label = 'Resource match';
                         }
+                        if (!icon) return null;
                         return (
                           <span key={i} className={styles.matchSignal} title={signal}>
                             {icon} {label}
