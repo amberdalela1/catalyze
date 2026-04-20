@@ -497,6 +497,19 @@ export async function seedDatabase() {
       if (!existing.registrationNo && orgData.registrationNo) {
         await existing.update({ registrationNo: orgData.registrationNo });
         console.log(`  🔄 Updated "${orgData.name}" with registrationNo ${orgData.registrationNo}`);
+      }
+
+      // Backfill a 'joined' post if this org doesn't have one yet
+      const hasJoined = await Post.findOne({ where: { orgId: existing.id, type: 'joined' } });
+      if (!hasJoined) {
+        await Post.create({
+          orgId: existing.id,
+          authorId: existing.ownerId,
+          title: `${orgData.name} joined Catalyze`,
+          content: orgData.mission,
+          type: 'joined',
+        });
+        console.log(`  ✅ Created 'joined' post for "${orgData.name}"`);
       } else {
         console.log(`  ⏭  Skipping "${orgData.name}" (already exists)`);
       }

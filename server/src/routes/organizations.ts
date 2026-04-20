@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { body } from 'express-validator';
 import { Op } from 'sequelize';
-import { Organization, User, Media, OrgResource, FeedRecommendation } from '../models';
+import { Organization, User, Media, OrgResource, FeedRecommendation, Post } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
 
@@ -80,6 +80,15 @@ router.post(
       }
 
       const org = await Organization.create(orgData);
+
+      // Auto-create a system 'joined' post for the feed
+      await Post.create({
+        orgId: org.id,
+        authorId: req.userId!,
+        title: `${org.name} joined Catalyze`,
+        content: org.mission || '',
+        type: 'joined',
+      });
 
       res.status(201).json(org);
     } catch (error) {
