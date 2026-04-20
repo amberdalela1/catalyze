@@ -106,6 +106,25 @@ function resourceScore(userOrg: OrgWithResources, candidate: OrgWithResources): 
   return { total: offerScore + needScore, reasons };
 }
 
+/**
+ * Category score: 0–20 points.
+ * Same category → 20, different → 0.
+ * When user has no resources specified, category weight increases to compensate.
+ */
+function categoryScore(userOrg: OrgWithResources, candidate: OrgWithResources): { total: number; reason: string | null } {
+  if (!userOrg.category || !candidate.category) return { total: 0, reason: null };
+
+  const hasResources = userOrg.offeredResources.length > 0 || userOrg.neededResources.length > 0;
+
+  if (userOrg.category.toLowerCase() === candidate.category.toLowerCase()) {
+    // Boost category score when no resources are specified (category becomes primary signal)
+    const score = hasResources ? 20 : 30;
+    return { total: score, reason: `Same category: ${candidate.category}` };
+  }
+
+  return { total: 0, reason: null };
+}
+
 // ── Main scoring function (local first, AI fallback) ──────────────
 
 export async function getRecommendations(
@@ -114,15 +133,18 @@ export async function getRecommendations(
 ): Promise<RecommendationResult[]> {
   if (candidateOrgs.length === 0) return [];
 
-  // ── Phase 1: Local deterministic scoring (0–75 pts) ──
+  // ── Phase 1: Local deterministic scoring (0–95 pts) ──
+  // geo(30) + size(15) + resources(30) + category(20, or 30 if no resources)
   const scored = candidateOrgs.map(candidate => {
     const geo = geoScore(userOrg, candidate);
     const size = sizeScore(userOrg, candidate);
     const res = resourceScore(userOrg, candidate);
-    const localScore = geo + size + res.total;
+    const cat = categoryScore(userOrg, candidate);
+    const localScore = geo + size + res.total + cat.total;
 
     // Build reason string from local factors
     const reasonParts: string[] = [];
+    if (cat.reason) reasonParts.push(cat.reason);
     if (geo >= 20) reasonParts.push('Nearby location');
     if (size >= 15) reasonParts.push('Similar org size');
     else if (size >= 10) reasonParts.push('Compatible org size');
