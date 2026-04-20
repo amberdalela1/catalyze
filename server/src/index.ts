@@ -6,7 +6,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { sequelize } from './config/database';
-import { User } from './models';
+import { User, Organization, Post } from './models';
 import { seedDatabase } from './seed';
 import authRoutes from './routes/auth';
 import organizationRoutes from './routes/organizations';
@@ -124,6 +124,28 @@ async function start() {
     if (userCount === 0) {
       console.log('Empty database detected — running auto-seed...');
       await seedDatabase();
+    }
+
+    // Backfill 'joined' posts for any org that doesn't have one
+    const orgsWithoutJoined = await Organization.findAll({
+      attributes: ['id', 'name', 'mission', 'ownerId'],
+    });
+    let backfilled = 0;
+    for (const org of orgsWithoutJoined) {
+      const has = await Post.findOne({ where: { orgId: org.id, type: 'joined' } });
+      if (!has) {
+        await Post.create({
+          orgId: org.id,
+          authorId: org.ownerId,
+          title: `${org.name} joined Catalyze`,
+          content: org.mission || '',
+          type: 'joined',
+        });
+        backfilled++;
+      }
+    }
+    if (backfilled > 0) {
+      console.log(`Backfilled ${backfilled} 'joined' posts`);
     }
   } catch (error) {
     console.warn('Database connection failed — running without DB:', (error as Error).message);
