@@ -2,6 +2,7 @@ node_modules
 dist
 .env
 *.local
+tsconfig.tsbuildinfo
 ios
 !ios/App/App/Info.plist
 android
