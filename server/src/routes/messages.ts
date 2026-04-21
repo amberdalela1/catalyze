@@ -119,6 +119,38 @@ router.get('/inbox', authenticate, async (req: AuthRequest, res: Response): Prom
   }
 });
 
+// Lightweight unread summary for badge/polling in app shell
+router.get('/unread-summary', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const org = await Organization.findOne({ where: { ownerId: req.userId } });
+    if (!org) {
+      res.json({ unreadThreads: 0, unreadMessages: 0 });
+      return;
+    }
+
+    const unreadCounts = await Message.findAll({
+      where: {
+        receiverOrgId: org.id,
+        readAt: null,
+      },
+      attributes: [
+        'senderOrgId',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'unreadCount'],
+      ],
+      group: ['senderOrgId'],
+      raw: true,
+    }) as any[];
+
+    const unreadThreads = unreadCounts.length;
+    const unreadMessages = unreadCounts.reduce((total: number, row: any) => total + Number(row.unreadCount), 0);
+
+    res.json({ unreadThreads, unreadMessages });
+  } catch (error) {
+    console.error('Get unread summary error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // Get conversation with a specific org
 router.get('/conversation/:orgId', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {

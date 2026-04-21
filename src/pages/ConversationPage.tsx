@@ -39,10 +39,35 @@ export default function ConversationPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.get<ConversationData>(`/messages/conversation/${orgId}`)
-      .then(setData)
-      .catch(() => navigate('/inbox', { replace: true }))
-      .finally(() => setLoading(false));
+    let isMounted = true;
+
+    const loadConversation = async (showLoader = false) => {
+      if (showLoader) setLoading(true);
+      try {
+        const conversation = await api.get<ConversationData>(`/messages/conversation/${orgId}`);
+        if (isMounted) {
+          setData(conversation);
+        }
+      } catch {
+        if (showLoader) {
+          navigate('/inbox', { replace: true });
+        }
+      } finally {
+        if (showLoader && isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadConversation(true);
+    const intervalId = window.setInterval(() => {
+      void loadConversation(false);
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
   }, [orgId, navigate]);
 
   useEffect(() => {

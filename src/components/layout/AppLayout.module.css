@@ -64,4 +64,22 @@
 .tabIcon {
   font-size: 22px;
   line-height: 1;
+  position: relative;
+}
+
+.tabBadge {
+  position: absolute;
+  top: -8px;
+  right: -14px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  line-height: 18px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
 }

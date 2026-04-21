@@ -35,10 +35,33 @@ export default function InboxPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<ConversationSummary[]>('/messages/inbox')
-      .then(setConversations)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let isMounted = true;
+
+    const loadInbox = async (showLoader = false) => {
+      if (showLoader) setLoading(true);
+      try {
+        const inbox = await api.get<ConversationSummary[]>('/messages/inbox');
+        if (isMounted) {
+          setConversations(inbox);
+        }
+      } catch {
+        // no-op: keep current UI state
+      } finally {
+        if (showLoader && isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInbox(true);
+    const intervalId = window.setInterval(() => {
+      void loadInbox(false);
+    }, 8000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   if (loading) return <LoadingCenter size="lg" />;
