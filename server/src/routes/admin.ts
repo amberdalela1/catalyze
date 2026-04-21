@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { Op } from 'sequelize';
 import { User, Organization, Post, Partnership, Media, OrgResource, Reaction, Message } from '../models';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { STANDARD_RESOURCES } from '../config/resources';
 
 const router = Router();
 
@@ -456,7 +457,11 @@ router.post('/update-org-as', async (req: AuthRequest, res: Response): Promise<v
       await OrgResource.destroy({ where: { orgId: org.id, direction: 'offer' } });
       if (offeredResources.length > 0) {
         await OrgResource.bulkCreate(
-          offeredResources.map((r: string) => ({ orgId: org.id, resource: r, direction: 'offer', isCustom: false }))
+          offeredResources.map((r: string) => {
+            const trimmed = r.trim();
+            const canonical = STANDARD_RESOURCES.find(s => s.toLowerCase() === trimmed.toLowerCase());
+            return { orgId: org.id, resource: canonical ?? trimmed, direction: 'offer', isCustom: !canonical };
+          })
         );
       }
     }
@@ -464,7 +469,11 @@ router.post('/update-org-as', async (req: AuthRequest, res: Response): Promise<v
       await OrgResource.destroy({ where: { orgId: org.id, direction: 'need' } });
       if (neededResources.length > 0) {
         await OrgResource.bulkCreate(
-          neededResources.map((r: string) => ({ orgId: org.id, resource: r, direction: 'need', isCustom: false }))
+          neededResources.map((r: string) => {
+            const trimmed = r.trim();
+            const canonical = STANDARD_RESOURCES.find(s => s.toLowerCase() === trimmed.toLowerCase());
+            return { orgId: org.id, resource: canonical ?? trimmed, direction: 'need', isCustom: !canonical };
+          })
         );
       }
     }

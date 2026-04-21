@@ -58,7 +58,12 @@ router.put(
 
       const normalizedResources = resources
         .map((r) => typeof r === 'string' ? r.trim() : r.resource.trim())
-        .filter((r) => r.length > 0);
+        .filter((r) => r.length > 0)
+        .map((r) => {
+          // Normalize to canonical casing from STANDARD_RESOURCES if possible
+          const canonical = STANDARD_RESOURCES.find(s => s.toLowerCase() === r.toLowerCase());
+          return canonical ?? r;
+        });
 
       // Remove existing resources for this direction
       await OrgResource.destroy({ where: { orgId: org.id, direction } });
@@ -70,7 +75,7 @@ router.put(
             orgId: org.id,
             resource,
             direction,
-            isCustom: !STANDARD_RESOURCES.includes(resource),
+            isCustom: !STANDARD_RESOURCES.some(s => s.toLowerCase() === resource.toLowerCase()),
           }))
         );
       }

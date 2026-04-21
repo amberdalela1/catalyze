@@ -70,9 +70,11 @@ function geoScore(userOrg: OrgProfile, candidate: OrgProfile): number {
  */
 function sizeScore(userOrg: OrgProfile, candidate: OrgProfile): number {
   if (!userOrg.size || !candidate.size) return 8;
-  if (userOrg.size === candidate.size) return 15;
+  const userSize = userOrg.size.toLowerCase();
+  const candidateSize = candidate.size.toLowerCase();
+  if (userSize === candidateSize) return 15;
   const sizeOrder = { small: 0, medium: 1, large: 2 } as Record<string, number>;
-  const diff = Math.abs((sizeOrder[userOrg.size] ?? 1) - (sizeOrder[candidate.size] ?? 1));
+  const diff = Math.abs((sizeOrder[userSize] ?? 1) - (sizeOrder[candidateSize] ?? 1));
   return diff === 1 ? 10 : 5;
 }
 
@@ -83,10 +85,12 @@ function sizeScore(userOrg: OrgProfile, candidate: OrgProfile): number {
 function resourceScore(userOrg: OrgWithResources, candidate: OrgWithResources): { total: number; reasons: string[] } {
   const reasons: string[] = [];
 
-  // What they offer that I need
-  const theyOfferINeed = candidate.offeredResources.filter(r => userOrg.neededResources.includes(r));
+  // What they offer that I need (case-insensitive)
+  const userNeeds = new Set(userOrg.neededResources.map(r => r.toLowerCase()));
+  const candidateNeeds = new Set(candidate.neededResources.map(r => r.toLowerCase()));
+  const theyOfferINeed = candidate.offeredResources.filter(r => userNeeds.has(r.toLowerCase()));
   // What I offer that they need
-  const iOfferTheyNeed = userOrg.offeredResources.filter(r => candidate.neededResources.includes(r));
+  const iOfferTheyNeed = userOrg.offeredResources.filter(r => candidateNeeds.has(r.toLowerCase()));
 
   let offerScore = 0;
   if (theyOfferINeed.length >= 3) offerScore = 15;
