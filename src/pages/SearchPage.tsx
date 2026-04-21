@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
@@ -72,6 +72,23 @@ export default function SearchPage() {
   const [recommendedIds, setRecommendedIds] = useState<Set<number>>(new Set());
   const [recommendedOrder, setRecommendedOrder] = useState<number[]>([]);
   const [recommendedReasons, setRecommendedReasons] = useState<Record<number, string>>({});
+  const refreshedRecommendedRef = useRef(false);
+
+  const fetchRecommendations = useCallback(async (forceRefresh = false) => {
+    try {
+      const endpoint = forceRefresh ? '/feed/recommendations?refresh=1' : '/feed/recommendations';
+      const recs = await api.get<{ id: number; reason?: string }[]>(endpoint);
+      setRecommendedIds(new Set(recs.map(r => r.id)));
+      setRecommendedOrder(recs.map(r => r.id));
+      const reasons: Record<number, string> = {};
+      recs.forEach(r => { if (r.reason) reasons[r.id] = r.reason; });
+      setRecommendedReasons(reasons);
+    } catch {
+      setRecommendedIds(new Set());
+      setRecommendedOrder([]);
+      setRecommendedReasons({});
+    }
+  }, []);
 
   const fetchMsgStatus = useCallback(async (orgIds: number[]) => {
     const unique = [...new Set(orgIds)].filter(Boolean);
@@ -108,16 +125,15 @@ export default function SearchPage() {
         ps.filter(p => p.status === 'accepted').map(p => p.organization.id)
       )))
       .catch(() => {});
-    api.get<{ id: number; reason?: string }[]>('/feed/recommendations')
-      .then(recs => {
-        setRecommendedIds(new Set(recs.map(r => r.id)));
-        setRecommendedOrder(recs.map(r => r.id));
-        const reasons: Record<number, string> = {};
-        recs.forEach(r => { if (r.reason) reasons[r.id] = r.reason; });
-        setRecommendedReasons(reasons);
-      })
-      .catch(() => {});
-  }, []);
+    fetchRecommendations();
+  }, [fetchRecommendations]);
+
+  useEffect(() => {
+    if (viewFilter === 'recommended' && !refreshedRecommendedRef.current) {
+      refreshedRecommendedRef.current = true;
+      fetchRecommendations(true);
+    }
+  }, [viewFilter, fetchRecommendations]);
 
   const filteredResults = viewFilter === 'all'
     ? results

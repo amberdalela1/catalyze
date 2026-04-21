@@ -281,12 +281,23 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
       return;
     }
 
+    const forceRefresh = req.query.refresh === '1';
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const cacheMinTime = org.updatedAt > oneDayAgo ? org.updatedAt : oneDayAgo;
+
+    if (forceRefresh) {
+      await FeedRecommendation.destroy({ where: { orgId: org.id } });
+    }
+
     let recs = await FeedRecommendation.findAll({
-      where: { orgId: org.id },
+      where: {
+        orgId: org.id,
+        generatedAt: { [Op.gt]: cacheMinTime },
+      },
       attributes: ['recommendedOrgId', 'reason'],
     });
 
-    // Auto-generate recommendations if none exist
+    // Auto-generate recommendations if none exist or cache is stale
     if (recs.length === 0) {
       const partnerships = await Partnership.findAll({
         where: {
@@ -308,6 +319,7 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
         const candidateProfiles = await Promise.all(candidates.map(buildOrgWithResources));
         const aiResults = await getRecommendations(userProfile, candidateProfiles);
         if (aiResults.length > 0) {
+          await FeedRecommendation.destroy({ where: { orgId: org.id } });
           await FeedRecommendation.bulkCreate(
             aiResults.map((r) => ({
               orgId: org.id,

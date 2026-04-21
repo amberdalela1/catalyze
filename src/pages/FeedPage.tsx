@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import Card, { CardBody, CardHeader, CardFooter } from '../components/ui/Card';
@@ -58,6 +58,7 @@ export default function FeedPage() {
   );
   const [msgStatus, setMsgStatus] = useState<Record<number, MsgStatus>>({});
   const [favSet, setFavSet] = useState<Set<number>>(new Set());
+  const refreshedRecommendedRef = useRef(false);
 
   const fetchMsgStatus = useCallback(async (orgIds: number[]) => {
     const unique = [...new Set(orgIds)].filter(Boolean);
@@ -88,8 +89,11 @@ export default function FeedPage() {
     } catch { /* best effort */ }
   }, [favSet]);
 
-  const fetchPosts = useCallback(async (tab: FeedTab) => {
-    const data = await api.get<Post[]>(TAB_ENDPOINTS[tab]).catch(() => []);
+  const fetchPosts = useCallback(async (tab: FeedTab, forceRefresh = false) => {
+    const endpoint = forceRefresh && tab === 'recommended'
+      ? `${TAB_ENDPOINTS[tab]}?refresh=1`
+      : TAB_ENDPOINTS[tab];
+    const data = await api.get<Post[]>(endpoint).catch(() => []);
     setPosts(data);
     fetchMsgStatus(data.map(p => p.organization.id));
     return data;
@@ -98,7 +102,11 @@ export default function FeedPage() {
   useEffect(() => {
     async function loadFeed() {
       try {
-        await Promise.all([fetchPosts(activeTab), fetchFavorites()]);
+        const shouldRefreshRecommended = activeTab === 'recommended' && !refreshedRecommendedRef.current;
+        if (shouldRefreshRecommended) {
+          refreshedRecommendedRef.current = true;
+        }
+        await Promise.all([fetchPosts(activeTab, shouldRefreshRecommended), fetchFavorites()]);
       } finally {
         setLoading(false);
       }
@@ -112,7 +120,11 @@ export default function FeedPage() {
     sessionStorage.setItem('feedTab', tab);
     setTabLoading(true);
     try {
-      await fetchPosts(tab);
+      const shouldRefreshRecommended = tab === 'recommended' && !refreshedRecommendedRef.current;
+      if (shouldRefreshRecommended) {
+        refreshedRecommendedRef.current = true;
+      }
+      await fetchPosts(tab, shouldRefreshRecommended);
     } finally {
       setTabLoading(false);
     }
