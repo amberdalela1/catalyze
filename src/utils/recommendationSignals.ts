@@ -31,33 +31,36 @@ function getResourceMatchCount(signal: string): number {
 export function parseRecommendationSignals(reason?: string | null): RecommendationSignal[] {
   if (!reason) return [];
 
-  return reason
-    .split(' · ')
-    .map(signal => signal.trim())
-    .filter(Boolean)
-    .map(signal => {
-      if (signal.startsWith('Same category')) {
-        return { type: 'category', label: 'Same category', title: signal };
-      }
+  const parts = reason.split(' · ').map(s => s.trim()).filter(Boolean);
 
-      if (signal.toLowerCase().includes('location')) {
-        return { type: 'location', label: 'Nearby', title: signal };
-      }
+  // Accumulate all resource signals into a single tag with a combined count
+  let totalResourceCount = 0;
+  const resourceTitles: string[] = [];
+  const nonResourceSignals: RecommendationSignal[] = [];
 
-      if (signal.includes('org size')) {
-        const label = signal.includes('Similar') ? 'Same size' : 'Similar size';
-        return { type: 'size', label, title: signal };
-      }
+  for (const signal of parts) {
+    if (signal.startsWith('Same category')) {
+      nonResourceSignals.push({ type: 'category', label: 'Same category', title: signal });
+    } else if (signal.toLowerCase().includes('location')) {
+      nonResourceSignals.push({ type: 'location', label: 'Nearby', title: signal });
+    } else if (signal.includes('org size')) {
+      const label = signal.includes('Similar') ? 'Same size' : 'Similar size';
+      nonResourceSignals.push({ type: 'size', label, title: signal });
+    } else if (signal.includes('offer') || signal.includes('need')) {
+      const count = getResourceMatchCount(signal);
+      totalResourceCount += count > 0 ? count : 1;
+      resourceTitles.push(signal);
+    }
+  }
 
-      if (signal.includes('offer') || signal.includes('need')) {
-        const count = getResourceMatchCount(signal);
-        const label = count > 0
-          ? `${count} resource${count === 1 ? '' : 's'} matched`
-          : 'Resource match';
-        return { type: 'resource', label, title: signal };
-      }
+  const result: RecommendationSignal[] = [...nonResourceSignals];
 
-      return null;
-    })
-    .filter((signal): signal is RecommendationSignal => signal !== null);
+  if (resourceTitles.length > 0) {
+    const label = totalResourceCount > 0
+      ? `${totalResourceCount} resource${totalResourceCount === 1 ? '' : 's'} matched`
+      : 'Resource match';
+    result.push({ type: 'resource', label, title: resourceTitles.join(' · ') });
+  }
+
+  return result;
 }
