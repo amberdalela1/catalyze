@@ -9,6 +9,7 @@ import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
 import { HeartIcon, MegaphoneIcon, PlusIcon, CheckCircleIcon, TagIcon, LocationIcon, BuildingIcon } from '../components/ui/Icons';
 import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
+import { parseRecommendationSignals } from '../utils/recommendationSignals';
 import styles from './FeedPage.module.css';
 
 interface Post {
@@ -193,26 +194,26 @@ export default function FeedPage() {
                       </p>
                       {post.recommendationReason && (
                         <div className={styles.matchSignals}>
-                          {post.recommendationReason.split(' · ').map((signal, i) => {
+                          {parseRecommendationSignals(post.recommendationReason).map((signal, i) => {
                             let icon: React.ReactNode | null = null;
-                            let label = '';
-                            if (signal.startsWith('Same category')) {
+                            if (signal.type === 'category') {
                               icon = <TagIcon size={11} />;
-                              label = 'Same category';
-                            } else if (signal.includes('location')) {
+                            } else if (signal.type === 'location') {
                               icon = <LocationIcon size={11} />;
-                              label = 'Nearby';
-                            } else if (signal.includes('org size')) {
+                            } else if (signal.type === 'size') {
                               icon = <BuildingIcon size={11} />;
-                              label = signal.includes('Similar') ? 'Same size' : 'Similar size';
-                            } else if (signal.includes('offer') || signal.includes('need')) {
+                            } else if (signal.type === 'resource') {
                               icon = <HandshakeIcon size={11} />;
-                              label = 'Resource match';
                             }
                             if (!icon) return null;
+                            const variantClass =
+                              signal.type === 'category' ? styles.matchSignalCategory
+                              : signal.type === 'location' ? styles.matchSignalLocation
+                              : signal.type === 'size' ? styles.matchSignalSize
+                              : styles.matchSignalResource;
                             return (
-                              <span key={i} className={styles.matchSignal} title={signal}>
-                                {icon} {label}
+                              <span key={i} className={`${styles.matchSignal} ${variantClass}`} title={signal.title}>
+                                {icon} {signal.label}
                               </span>
                             );
                           })}

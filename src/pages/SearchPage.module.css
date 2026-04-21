@@ -247,16 +247,34 @@
 }
 
 .matchSignal {
+  --signal-color: var(--color-primary);
   display: inline-flex;
   align-items: center;
   gap: 3px;
   font-size: 10px;
   padding: 2px 6px;
   border-radius: var(--radius-full);
-  background-color: var(--color-primary-50);
-  color: var(--color-primary);
+  color: var(--signal-color);
+  background-color: color-mix(in srgb, var(--signal-color) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--signal-color) 24%, transparent);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
+}
+
+.matchSignalCategory {
+  --signal-color: var(--color-primary);
+}
+
+.matchSignalLocation {
+  --signal-color: var(--color-success);
+}
+
+.matchSignalSize {
+  --signal-color: var(--color-warning);
+}
+
+.matchSignalResource {
+  --signal-color: var(--color-accent);
 }
 
 .emptySearch {
