@@ -397,7 +397,11 @@ router.post('/accept-as', async (req: AuthRequest, res: Response): Promise<void>
 // Update an org profile as admin (testing/impersonation)
 router.post('/update-org-as', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { orgId, ...payload } = req.body as Record<string, unknown> & { orgId?: number };
+    const { orgId, offeredResources, neededResources, ...payload } = req.body as Record<string, unknown> & {
+      orgId?: number;
+      offeredResources?: string[];
+      neededResources?: string[];
+    };
     if (!orgId) {
       res.status(400).json({ message: 'orgId is required' });
       return;
@@ -434,12 +438,36 @@ router.post('/update-org-as', async (req: AuthRequest, res: Response): Promise<v
       }
     }
 
-    if (Object.keys(updates).length === 0) {
+    const hasOrgUpdates = Object.keys(updates).length > 0;
+    const hasResourceUpdates = Array.isArray(offeredResources) || Array.isArray(neededResources);
+
+    if (!hasOrgUpdates && !hasResourceUpdates) {
       res.status(400).json({ message: 'At least one update field is required' });
       return;
     }
 
-    await org.update(updates);
+    if (hasOrgUpdates) {
+      await org.update(updates);
+    }
+
+    // Update resources if provided
+    const { OrgResource } = await import('../models');
+    if (Array.isArray(offeredResources)) {
+      await OrgResource.destroy({ where: { orgId: org.id, direction: 'offer' } });
+      if (offeredResources.length > 0) {
+        await OrgResource.bulkCreate(
+          offeredResources.map((r: string) => ({ orgId: org.id, resource: r, direction: 'offer', isCustom: false }))
+        );
+      }
+    }
+    if (Array.isArray(neededResources)) {
+      await OrgResource.destroy({ where: { orgId: org.id, direction: 'need' } });
+      if (neededResources.length > 0) {
+        await OrgResource.bulkCreate(
+          neededResources.map((r: string) => ({ orgId: org.id, resource: r, direction: 'need', isCustom: false }))
+        );
+      }
+    }
 
     // Invalidate recommendation cache for this org and orgs that reference it.
     const { FeedRecommendation } = await import('../models');

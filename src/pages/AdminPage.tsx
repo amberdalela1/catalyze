@@ -96,6 +96,9 @@ export default function AdminPage() {
     city: '',
     state: '',
     website: '',
+    size: '',
+    offeredResources: '',
+    neededResources: '',
   });
   const [testingSubmitting, setTestingSubmitting] = useState(false);
   const [testingMessage, setTestingMessage] = useState<string | null>(null);
@@ -321,6 +324,11 @@ export default function AdminPage() {
     if (updateOrgForm.city.trim()) payload.city = updateOrgForm.city.trim();
     if (updateOrgForm.state.trim()) payload.state = updateOrgForm.state.trim();
     if (updateOrgForm.website.trim()) payload.website = updateOrgForm.website.trim();
+    if (updateOrgForm.size) payload.size = updateOrgForm.size;
+    if (updateOrgForm.offeredResources.trim())
+      payload.offeredResources = updateOrgForm.offeredResources.split(',').map((r) => r.trim()).filter(Boolean);
+    if (updateOrgForm.neededResources.trim())
+      payload.neededResources = updateOrgForm.neededResources.split(',').map((r) => r.trim()).filter(Boolean);
 
     if (Object.keys(payload).length === 1) {
       setTestingMessage('Error: Enter at least one field to update');
@@ -339,6 +347,9 @@ export default function AdminPage() {
         city: '',
         state: '',
         website: '',
+        size: '',
+        offeredResources: '',
+        neededResources: '',
       });
       setTimeout(() => setTestingMessage(null), 3000);
       loadOrgs();
@@ -726,7 +737,34 @@ export default function AdminPage() {
               className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
             />
-            <div className={styles.formHint}>Only filled fields are updated.</div>
+            <select
+              value={updateOrgForm.size}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, size: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            >
+              <option value="">Size (optional)</option>
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Resources offered (comma-separated, optional)"
+              value={updateOrgForm.offeredResources}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, offeredResources: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <input
+              type="text"
+              placeholder="Resources needed (comma-separated, optional)"
+              value={updateOrgForm.neededResources}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, neededResources: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <div className={styles.formHint}>Only filled fields are updated. Resources replace existing ones if provided.</div>
             <button
               className={styles.actionBtn}
               onClick={handleUpdateOrgAs}
