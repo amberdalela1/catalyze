@@ -394,4 +394,69 @@ router.post('/accept-as', async (req: AuthRequest, res: Response): Promise<void>
   }
 });
 
+// Update an org profile as admin (testing/impersonation)
+router.post('/update-org-as', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { orgId, ...payload } = req.body as Record<string, unknown> & { orgId?: number };
+    if (!orgId) {
+      res.status(400).json({ message: 'orgId is required' });
+      return;
+    }
+
+    const org = await Organization.findByPk(Number(orgId));
+    if (!org) {
+      res.status(404).json({ message: 'Organization not found' });
+      return;
+    }
+
+    const allowedFields = [
+      'name',
+      'description',
+      'mission',
+      'category',
+      'city',
+      'state',
+      'website',
+      'contactEmail',
+      'contactPhone',
+      'registrationNo',
+      'size',
+      'latitude',
+      'longitude',
+      'logoUrl',
+    ] as const;
+
+    const updates: Record<string, unknown> = {};
+    for (const key of allowedFields) {
+      const value = payload[key];
+      if (value !== undefined) {
+        updates[key] = value;
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ message: 'At least one update field is required' });
+      return;
+    }
+
+    await org.update(updates);
+
+    // Invalidate recommendation cache for this org and orgs that reference it.
+    const { FeedRecommendation } = await import('../models');
+    await FeedRecommendation.destroy({
+      where: {
+        [Op.or]: [
+          { orgId: org.id },
+          { recommendedOrgId: org.id },
+        ],
+      },
+    });
+
+    res.json(org);
+  } catch (error) {
+    console.error('Admin update-org-as error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 export default router;

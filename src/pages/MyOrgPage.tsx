@@ -175,10 +175,18 @@ export default function MyOrgPage() {
   };
 
   const saveResources = async (orgId: number) => {
-    try {
-      await api.put('/resources', { orgId, direction: 'offer', resources: offeredResources });
-      await api.put('/resources', { orgId, direction: 'need', resources: neededResources });
-    } catch { /* best effort */ }
+    await Promise.all([
+      api.put('/resources', {
+        orgId,
+        direction: 'offer',
+        resources: offeredResources.map((resource) => ({ resource })),
+      }),
+      api.put('/resources', {
+        orgId,
+        direction: 'need',
+        resources: neededResources.map((resource) => ({ resource })),
+      }),
+    ]);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -193,6 +201,12 @@ export default function MyOrgPage() {
         setEditing(false);
         await uploadMedia(created.id!);
         await saveResources(created.id!);
+        const refreshed = await api.get<Organization>('/organizations/mine');
+        setOrg(refreshed);
+        if (refreshed.resources) {
+          setOfferedResources(refreshed.resources.filter(r => r.direction === 'offer').map(r => r.resource));
+          setNeededResources(refreshed.resources.filter(r => r.direction === 'need').map(r => r.resource));
+        }
         setMessage('Organization created successfully!');
       } else {
         const updated = await api.put<Organization>(`/organizations/${org.id}`, org);
@@ -200,6 +214,12 @@ export default function MyOrgPage() {
         setEditing(false);
         await uploadMedia(org.id!);
         await saveResources(org.id!);
+        const refreshed = await api.get<Organization>('/organizations/mine');
+        setOrg(refreshed);
+        if (refreshed.resources) {
+          setOfferedResources(refreshed.resources.filter(r => r.direction === 'offer').map(r => r.resource));
+          setNeededResources(refreshed.resources.filter(r => r.direction === 'need').map(r => r.resource));
+        }
         setMessage('Organization updated successfully!');
       }
     } catch (err) {

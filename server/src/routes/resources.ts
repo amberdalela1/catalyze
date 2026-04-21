@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { body } from 'express-validator';
+import { Op } from 'sequelize';
 import { OrgResource, Organization, FeedRecommendation } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
@@ -33,7 +34,13 @@ router.put(
   [
     body('direction').isIn(['offer', 'need']).withMessage('Direction must be offer or need'),
     body('resources').isArray().withMessage('Resources must be an array'),
-    body('resources.*.resource').trim().notEmpty().withMessage('Resource name is required'),
+    body('resources.*').custom((value) => {
+      if (typeof value === 'string' && value.trim().length > 0) return true;
+      if (value && typeof value === 'object' && typeof value.resource === 'string' && value.resource.trim().length > 0) {
+        return true;
+      }
+      throw new Error('Resource name is required');
+    }),
     handleValidationErrors,
   ],
   async (req: AuthRequest, res: Response): Promise<void> => {
@@ -46,20 +53,24 @@ router.put(
 
       const { direction, resources } = req.body as {
         direction: 'offer' | 'need';
-        resources: { resource: string }[];
+        resources: Array<{ resource: string } | string>;
       };
+
+      const normalizedResources = resources
+        .map((r) => typeof r === 'string' ? r.trim() : r.resource.trim())
+        .filter((r) => r.length > 0);
 
       // Remove existing resources for this direction
       await OrgResource.destroy({ where: { orgId: org.id, direction } });
 
       // Create new ones
-      if (resources.length > 0) {
+      if (normalizedResources.length > 0) {
         await OrgResource.bulkCreate(
-          resources.map((r) => ({
+          normalizedResources.map((resource) => ({
             orgId: org.id,
-            resource: r.resource.trim(),
+            resource,
             direction,
-            isCustom: !STANDARD_RESOURCES.includes(r.resource.trim()),
+            isCustom: !STANDARD_RESOURCES.includes(resource),
           }))
         );
       }

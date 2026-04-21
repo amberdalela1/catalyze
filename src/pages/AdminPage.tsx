@@ -88,6 +88,15 @@ export default function AdminPage() {
   const [messageForm, setMessageForm] = useState({ senderOrgId: '', receiverOrgId: '', content: '' });
   const [connectForm, setConnectForm] = useState({ requesterId: '', targetId: '' });
   const [acceptForm, setAcceptForm] = useState({ partnershipId: '' });
+  const [updateOrgForm, setUpdateOrgForm] = useState({
+    orgRef: '',
+    name: '',
+    mission: '',
+    category: '',
+    city: '',
+    state: '',
+    website: '',
+  });
   const [testingSubmitting, setTestingSubmitting] = useState(false);
   const [testingMessage, setTestingMessage] = useState<string | null>(null);
 
@@ -198,6 +207,23 @@ export default function AdminPage() {
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
+  function resolveOrgId(input: string): number | null {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    if (/^\d+$/.test(trimmed)) {
+      return Number(trimmed);
+    }
+
+    const taggedMatch = trimmed.match(/\(#(\d+)\)$/);
+    if (taggedMatch) {
+      return Number(taggedMatch[1]);
+    }
+
+    const exact = orgs.find((o) => o.name.toLowerCase() === trimmed.toLowerCase());
+    return exact ? exact.id : null;
+  }
+
   async function handlePostAs() {
     if (!postAs || !postForm.title.trim() || !postForm.content.trim()) return;
     setPostSubmitting(true);
@@ -218,11 +244,17 @@ export default function AdminPage() {
 
   async function handleMessageAs() {
     if (!messageForm.senderOrgId || !messageForm.receiverOrgId || !messageForm.content.trim()) return;
+    const senderOrgId = resolveOrgId(messageForm.senderOrgId);
+    const receiverOrgId = resolveOrgId(messageForm.receiverOrgId);
+    if (!senderOrgId || !receiverOrgId) {
+      setTestingMessage('Error: Select a valid sender and receiver org (name from list or numeric ID)');
+      return;
+    }
     setTestingSubmitting(true);
     try {
       await api.post('/admin/message-as', {
-        senderOrgId: Number(messageForm.senderOrgId),
-        receiverOrgId: Number(messageForm.receiverOrgId),
+        senderOrgId,
+        receiverOrgId,
         content: messageForm.content,
       });
       setMessageForm({ senderOrgId: '', receiverOrgId: '', content: '' });
@@ -236,11 +268,17 @@ export default function AdminPage() {
 
   async function handleConnectAs() {
     if (!connectForm.requesterId || !connectForm.targetId) return;
+    const requesterId = resolveOrgId(connectForm.requesterId);
+    const targetId = resolveOrgId(connectForm.targetId);
+    if (!requesterId || !targetId) {
+      setTestingMessage('Error: Select valid requester and target orgs (name from list or numeric ID)');
+      return;
+    }
     setTestingSubmitting(true);
     try {
       await api.post('/admin/connect-as', {
-        requesterId: Number(connectForm.requesterId),
-        targetId: Number(connectForm.targetId),
+        requesterId,
+        targetId,
       });
       setConnectForm({ requesterId: '', targetId: '' });
       setTestingMessage('Connection request sent successfully');
@@ -264,6 +302,48 @@ export default function AdminPage() {
       if (tab === 'testing') loadMessages();
     } catch (err) {
       setTestingMessage(`Error: ${err instanceof Error ? err.message : 'Failed to accept'}`);
+    }
+    setTestingSubmitting(false);
+  }
+
+  async function handleUpdateOrgAs() {
+    if (!updateOrgForm.orgRef.trim()) return;
+    const orgId = resolveOrgId(updateOrgForm.orgRef);
+    if (!orgId) {
+      setTestingMessage('Error: Select a valid organization (name from list or numeric ID)');
+      return;
+    }
+
+    const payload: Record<string, unknown> = { orgId };
+    if (updateOrgForm.name.trim()) payload.name = updateOrgForm.name.trim();
+    if (updateOrgForm.mission.trim()) payload.mission = updateOrgForm.mission.trim();
+    if (updateOrgForm.category.trim()) payload.category = updateOrgForm.category.trim();
+    if (updateOrgForm.city.trim()) payload.city = updateOrgForm.city.trim();
+    if (updateOrgForm.state.trim()) payload.state = updateOrgForm.state.trim();
+    if (updateOrgForm.website.trim()) payload.website = updateOrgForm.website.trim();
+
+    if (Object.keys(payload).length === 1) {
+      setTestingMessage('Error: Enter at least one field to update');
+      return;
+    }
+
+    setTestingSubmitting(true);
+    try {
+      await api.post('/admin/update-org-as', payload);
+      setTestingMessage('Organization updated successfully');
+      setUpdateOrgForm({
+        orgRef: updateOrgForm.orgRef,
+        name: '',
+        mission: '',
+        category: '',
+        city: '',
+        state: '',
+        website: '',
+      });
+      setTimeout(() => setTestingMessage(null), 3000);
+      loadOrgs();
+    } catch (err) {
+      setTestingMessage(`Error: ${err instanceof Error ? err.message : 'Failed to update organization'}`);
     }
     setTestingSubmitting(false);
   }
@@ -479,6 +559,12 @@ export default function AdminPage() {
       {/* Testing / Impersonation */}
       {tab === 'testing' && (
         <div className={styles.testingPanel}>
+          <datalist id="admin-org-options">
+            {orgs.map((org) => (
+              <option key={org.id} value={`${org.name} (#${org.id})`} />
+            ))}
+          </datalist>
+
           {testingMessage && (
             <div style={{
               padding: 'var(--space-3)',
@@ -494,32 +580,24 @@ export default function AdminPage() {
 
           <div className={styles.formSection}>
             <h3>Message As</h3>
-            <select
+            <input
+              type="text"
+              list="admin-org-options"
+              placeholder="Sender org name or ID"
               value={messageForm.senderOrgId}
               onChange={(e) => setMessageForm((f) => ({ ...f, senderOrgId: e.target.value }))}
               className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            >
-              <option value="">Select sender org</option>
-              {orgs.map((org) => (
-                <option key={org.id} value={String(org.id)}>
-                  {`${org.name} (#${org.id})`}
-                </option>
-              ))}
-            </select>
-            <select
+            />
+            <input
+              type="text"
+              list="admin-org-options"
+              placeholder="Receiver org name or ID"
               value={messageForm.receiverOrgId}
               onChange={(e) => setMessageForm((f) => ({ ...f, receiverOrgId: e.target.value }))}
               className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            >
-              <option value="">Select receiver org</option>
-              {orgs.map((org) => (
-                <option key={org.id} value={String(org.id)}>
-                  {`${org.name} (#${org.id})`}
-                </option>
-              ))}
-            </select>
+            />
             <textarea
               placeholder="Message content..."
               value={messageForm.content}
@@ -540,32 +618,24 @@ export default function AdminPage() {
 
           <div className={styles.formSection}>
             <h3>Connect As</h3>
-            <select
+            <input
+              type="text"
+              list="admin-org-options"
+              placeholder="Requester org name or ID"
               value={connectForm.requesterId}
               onChange={(e) => setConnectForm((f) => ({ ...f, requesterId: e.target.value }))}
               className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            >
-              <option value="">Select requester org</option>
-              {orgs.map((org) => (
-                <option key={org.id} value={String(org.id)}>
-                  {`${org.name} (#${org.id})`}
-                </option>
-              ))}
-            </select>
-            <select
+            />
+            <input
+              type="text"
+              list="admin-org-options"
+              placeholder="Target org name or ID"
               value={connectForm.targetId}
               onChange={(e) => setConnectForm((f) => ({ ...f, targetId: e.target.value }))}
               className={styles.formInput}
               style={{ marginBottom: 'var(--space-2)' }}
-            >
-              <option value="">Select target org</option>
-              {orgs.map((org) => (
-                <option key={org.id} value={String(org.id)}>
-                  {`${org.name} (#${org.id})`}
-                </option>
-              ))}
-            </select>
+            />
             <button
               className={styles.actionBtn}
               onClick={handleConnectAs}
@@ -594,6 +664,76 @@ export default function AdminPage() {
               style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
             >
               {testingSubmitting ? 'Accepting...' : 'Accept Connection'}
+            </button>
+          </div>
+
+          <div className={styles.formSection}>
+            <h3>Update Org As</h3>
+            <input
+              type="text"
+              list="admin-org-options"
+              placeholder="Org name or ID"
+              value={updateOrgForm.orgRef}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, orgRef: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <input
+              type="text"
+              placeholder="Name (optional)"
+              value={updateOrgForm.name}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, name: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <input
+              type="text"
+              placeholder="Mission (optional)"
+              value={updateOrgForm.mission}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, mission: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <input
+              type="text"
+              placeholder="Category (optional)"
+              value={updateOrgForm.category}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, category: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
+              <input
+                type="text"
+                placeholder="City (optional)"
+                value={updateOrgForm.city}
+                onChange={(e) => setUpdateOrgForm((f) => ({ ...f, city: e.target.value }))}
+                className={styles.formInput}
+              />
+              <input
+                type="text"
+                placeholder="State (optional)"
+                value={updateOrgForm.state}
+                onChange={(e) => setUpdateOrgForm((f) => ({ ...f, state: e.target.value }))}
+                className={styles.formInput}
+              />
+            </div>
+            <input
+              type="url"
+              placeholder="Website (optional)"
+              value={updateOrgForm.website}
+              onChange={(e) => setUpdateOrgForm((f) => ({ ...f, website: e.target.value }))}
+              className={styles.formInput}
+              style={{ marginBottom: 'var(--space-2)' }}
+            />
+            <div className={styles.formHint}>Only filled fields are updated.</div>
+            <button
+              className={styles.actionBtn}
+              onClick={handleUpdateOrgAs}
+              disabled={testingSubmitting || !updateOrgForm.orgRef.trim()}
+              style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+            >
+              {testingSubmitting ? 'Updating...' : 'Update Organization'}
             </button>
           </div>
         </div>
