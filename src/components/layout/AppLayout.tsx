@@ -1,6 +1,6 @@
 ﻿import { Outlet, NavLink } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import styles from './AppLayout.module.css';
@@ -27,6 +27,10 @@ const allTabs: TabDef[] = [
 export default function AppLayout() {
   const { user } = useAuth();
   const [unreadThreads, setUnreadThreads] = useState(0);
+  const [showUnreadToast, setShowUnreadToast] = useState(false);
+  const [toastUnreadCount, setToastUnreadCount] = useState(0);
+  const previousUnreadRef = useRef<number | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
   const isAdmin = user?.role === 'admin';
   const tabs = allTabs.filter((t) => !t.adminOnly || isAdmin);
 
@@ -35,9 +39,22 @@ export default function AppLayout() {
 
     const loadUnreadSummary = async () => {
       try {
-        const summary = await api.get<{ unreadThreads: number; unreadMessages: number }>('/messages/unread-summary');
+        const summary = await api.get<{ unreadThreads: number; unreadMessages: number }>(`/messages/unread-summary?ts=${Date.now()}`);
         if (isMounted) {
           setUnreadThreads(summary.unreadThreads);
+
+          const previous = previousUnreadRef.current;
+          if (previous !== null && summary.unreadThreads > previous) {
+            setToastUnreadCount(summary.unreadThreads);
+            setShowUnreadToast(true);
+            if (toastTimeoutRef.current) {
+              window.clearTimeout(toastTimeoutRef.current);
+            }
+            toastTimeoutRef.current = window.setTimeout(() => {
+              setShowUnreadToast(false);
+            }, 2800);
+          }
+          previousUnreadRef.current = summary.unreadThreads;
         }
       } catch {
         if (isMounted) {
@@ -52,6 +69,9 @@ export default function AppLayout() {
     return () => {
       isMounted = false;
       window.clearInterval(intervalId);
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -74,6 +94,11 @@ export default function AppLayout() {
               {tab.to === '/inbox' && unreadThreads > 0 && (
                 <span className={styles.tabBadge}>
                   {unreadThreads > 99 ? '99+' : unreadThreads}
+                </span>
+              )}
+              {tab.to === '/inbox' && showUnreadToast && (
+                <span className={styles.tabToast}>
+                  {toastUnreadCount > 99 ? '99+' : toastUnreadCount} unread thread{toastUnreadCount === 1 ? '' : 's'}
                 </span>
               )}
             </span>

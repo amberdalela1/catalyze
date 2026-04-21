@@ -69,17 +69,45 @@
 
 .tabBadge {
   position: absolute;
-  top: -8px;
-  right: -14px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--color-accent);
-  color: #fff;
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  line-height: 18px;
+  top: -14px;
+  right: -6px;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #ff1f1f;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
   text-align: center;
-  box-shadow: var(--shadow-sm);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.tabToast {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--color-gray-900);
+  color: var(--color-gray-50);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  animation: toastPop 180ms ease-out;
+}
+
+@keyframes toastPop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }

@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { body } from 'express-validator';
 import { Op } from 'sequelize';
 import { sequelize } from '../config/database';
@@ -7,6 +7,14 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { handleValidationErrors } from '../middleware/validate';
 
 const router = Router();
+
+// Messaging data should always be fresh in clients (web + mobile webviews).
+router.use((_req, res: Response, next: NextFunction) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 const MAX_UNCONNECTED_MESSAGES = 3;
 

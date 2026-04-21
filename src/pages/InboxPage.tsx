@@ -40,7 +40,7 @@ export default function InboxPage() {
     const loadInbox = async (showLoader = false) => {
       if (showLoader) setLoading(true);
       try {
-        const inbox = await api.get<ConversationSummary[]>('/messages/inbox');
+        const inbox = await api.get<ConversationSummary[]>(`/messages/inbox?ts=${Date.now()}`);
         if (isMounted) {
           setConversations(inbox);
         }
@@ -58,9 +58,20 @@ export default function InboxPage() {
       void loadInbox(false);
     }, 8000);
 
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        void loadInbox(false);
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityRefresh);
+    document.addEventListener('visibilitychange', handleVisibilityRefresh);
+
     return () => {
       isMounted = false;
       window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleVisibilityRefresh);
+      document.removeEventListener('visibilitychange', handleVisibilityRefresh);
     };
   }, []);
 

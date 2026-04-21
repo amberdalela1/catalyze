@@ -44,7 +44,7 @@ export default function ConversationPage() {
     const loadConversation = async (showLoader = false) => {
       if (showLoader) setLoading(true);
       try {
-        const conversation = await api.get<ConversationData>(`/messages/conversation/${orgId}`);
+        const conversation = await api.get<ConversationData>(`/messages/conversation/${orgId}?ts=${Date.now()}`);
         if (isMounted) {
           setData(conversation);
         }
@@ -64,9 +64,20 @@ export default function ConversationPage() {
       void loadConversation(false);
     }, 5000);
 
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        void loadConversation(false);
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityRefresh);
+    document.addEventListener('visibilitychange', handleVisibilityRefresh);
+
     return () => {
       isMounted = false;
       window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleVisibilityRefresh);
+      document.removeEventListener('visibilitychange', handleVisibilityRefresh);
     };
   }, [orgId, navigate]);
 
