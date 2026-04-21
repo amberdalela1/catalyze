@@ -159,13 +159,19 @@ export async function getRecommendations(
     return {
       orgId: candidate.id,
       score: localScore,
+      hasResourceMatch: res.total > 0,
       reason: reasonParts.length > 0 ? reasonParts.join(' · ') : `${candidate.category} organization`,
       candidate,
     };
   });
 
-  // Sort by local score descending
-  scored.sort((a, b) => b.score - a.score);
+  // Sort: resource matches always above non-resource matches, then by score within each group
+  scored.sort((a, b) => {
+    if (a.hasResourceMatch !== b.hasResourceMatch) {
+      return a.hasResourceMatch ? -1 : 1;
+    }
+    return b.score - a.score;
+  });
 
   // ── Phase 2: AI enhancement for top candidates ──
   // Only call AI to refine/re-rank the top 10 and produce nicer reasons
@@ -190,7 +196,12 @@ export async function getRecommendations(
             }
           }
         }
-        topCandidates.sort((a, b) => b.score - a.score);
+        topCandidates.sort((a, b) => {
+          if (a.hasResourceMatch !== b.hasResourceMatch) {
+            return a.hasResourceMatch ? -1 : 1;
+          }
+          return b.score - a.score;
+        });
       }
     } catch (error) {
       console.warn('AI enhancement failed, using local scoring only:', (error as Error).message);

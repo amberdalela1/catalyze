@@ -242,8 +242,16 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
 
     await org.update(req.body);
 
-    // Invalidate recommendation cache so feed regenerates with updated profile
-    await FeedRecommendation.destroy({ where: { orgId: org.id } });
+    // Invalidate recommendation cache for this org AND for any org that had this org
+    // as a candidate — size/location/category changes affect both directions.
+    await FeedRecommendation.destroy({
+      where: {
+        [Op.or]: [
+          { orgId: org.id },
+          { recommendedOrgId: org.id },
+        ],
+      },
+    });
 
     res.json(org);
   } catch (error) {
