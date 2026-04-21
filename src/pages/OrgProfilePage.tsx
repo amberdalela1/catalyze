@@ -92,6 +92,15 @@ export default function OrgProfilePage() {
   if (loading) return <LoadingCenter size="lg" />;
   if (!org) return null;
 
+  const offeredResources = (org.resources ?? []).filter((resource) => resource.direction === 'offer');
+  const neededResources = (org.resources ?? []).filter((resource) => resource.direction === 'need');
+  const sizeOption = org.size
+    ? ORG_SIZES.find((option) => option.value.toLowerCase() === org.size?.toLowerCase())
+    : undefined;
+  const isStandardCategory = STANDARD_CATEGORIES.some(
+    (category) => category.toLowerCase() === org.category.toLowerCase()
+  );
+
   return (
     <div>
       <Header title={org.name} showBack
@@ -111,8 +120,8 @@ export default function OrgProfilePage() {
         <h2 style={{ marginTop: 'var(--space-3)', fontSize: 'var(--font-size-2xl)' }}>
           {org.name}
         </h2>
-        <Badge variant={STANDARD_CATEGORIES.includes(org.category) ? 'primary' : 'neutral'}>
-          {!STANDARD_CATEGORIES.includes(org.category) && <><DiamondIcon size={14} />{' '}</>}{org.category}
+        <Badge variant={isStandardCategory ? 'primary' : 'neutral'}>
+          {!isStandardCategory && <><DiamondIcon size={14} />{' '}</>}{org.category}
         </Badge>
         {org.city && (
           <p style={{ color: 'var(--color-gray-500)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
@@ -192,6 +201,92 @@ export default function OrgProfilePage() {
       <div style={{ padding: 'var(--space-4)' }}>
         <Card>
           <CardBody>
+            <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)' }}>
+              Organization Details
+            </h3>
+            <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+              <p style={{ color: 'var(--color-gray-600)' }}>
+                <strong>Category:</strong> {org.category}
+              </p>
+              {(org.city || org.state) && (
+                <p style={{ color: 'var(--color-gray-600)' }}>
+                  <strong>Location:</strong> {[org.city, org.state].filter(Boolean).join(', ')}
+                </p>
+              )}
+              {org.size && (
+                <p style={{ color: 'var(--color-gray-600)' }}>
+                  <strong>Size:</strong> {sizeOption?.label || org.size}
+                </p>
+              )}
+              {org.registrationNo && (
+                <p style={{ color: 'var(--color-gray-600)' }}>
+                  <strong>Registration No.:</strong> {org.registrationNo}
+                </p>
+              )}
+              {org.website && (
+                <p style={{ color: 'var(--color-gray-600)' }}>
+                  <strong>Website:</strong>{' '}
+                  <a href={org.website} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>
+                    {org.website}
+                  </a>
+                </p>
+              )}
+              {org.contactEmail && (
+                <p style={{ color: 'var(--color-gray-600)' }}>
+                  <strong>Email:</strong>{' '}
+                  <a href={`mailto:${org.contactEmail}`} style={{ color: 'var(--color-primary)' }}>
+                    {org.contactEmail}
+                  </a>
+                </p>
+              )}
+              {org.contactPhone && (
+                <p style={{ color: 'var(--color-gray-600)' }}>
+                  <strong>Phone:</strong>{' '}
+                  <a href={`tel:${org.contactPhone}`} style={{ color: 'var(--color-primary)' }}>
+                    {org.contactPhone}
+                  </a>
+                </p>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+
+        {(offeredResources.length > 0 || neededResources.length > 0) && (
+          <Card style={{ marginTop: 'var(--space-3)' }}>
+            <CardBody>
+              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-3)' }}>
+                Resources
+              </h3>
+              {offeredResources.length > 0 && (
+                <div style={{ marginBottom: neededResources.length > 0 ? 'var(--space-3)' : 0 }}>
+                  <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-2)' }}>
+                    <strong>They Offer</strong>
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                    {offeredResources.map((resource) => (
+                      <Badge key={resource.id} variant="success">{resource.resource}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {neededResources.length > 0 && (
+                <div>
+                  <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-2)' }}>
+                    <strong>They Need</strong>
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                    {neededResources.map((resource) => (
+                      <Badge key={resource.id} variant="warning">{resource.resource}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        )}
+
+        <Card style={{ marginTop: 'var(--space-3)' }}>
+          <CardBody>
             <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>
               Mission
             </h3>
@@ -214,96 +309,6 @@ export default function OrgProfilePage() {
           </Card>
         )}
 
-        {org.website && (
-          <Card style={{ marginTop: 'var(--space-3)' }}>
-            <CardBody>
-              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>
-                Website
-              </h3>
-              <a
-                href={org.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--color-primary)' }}
-              >
-                {org.website}
-              </a>
-            </CardBody>
-          </Card>
-        )}
-
-        {(org.contactEmail || org.contactPhone) && (
-          <Card style={{ marginTop: 'var(--space-3)' }}>
-            <CardBody>
-              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>
-                Contact Us
-              </h3>
-              {org.contactEmail && (
-                <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-1)' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><EmailIcon size={16} />{' '}
-                  <a href={`mailto:${org.contactEmail}`} style={{ color: 'var(--color-primary)' }}>
-                    {org.contactEmail}
-                  </a></span>
-                </p>
-              )}
-              {org.contactPhone && (
-                <p style={{ color: 'var(--color-gray-600)' }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><PhoneIcon size={16} />{' '}
-                  <a href={`tel:${org.contactPhone}`} style={{ color: 'var(--color-primary)' }}>
-                    {org.contactPhone}
-                  </a></span>
-                </p>
-              )}
-            </CardBody>
-          </Card>
-        )}
-
-        {org.registrationNo && (
-          <Card style={{ marginTop: 'var(--space-3)' }}>
-            <CardBody>
-              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Registration No.</h3>
-              <p style={{ color: 'var(--color-gray-600)', display: 'flex', alignItems: 'center', gap: '6px' }}><BuildingIcon size={16} /> {org.registrationNo}</p>
-            </CardBody>
-          </Card>
-        )}
-
-        {org.size && (
-          <Card style={{ marginTop: 'var(--space-3)' }}>
-            <CardBody>
-              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Organization Size</h3>
-              <Badge variant="primary">{ORG_SIZES.find(s => s.value === org.size)?.label || org.size}</Badge>
-              <p style={{ color: 'var(--color-gray-500)', fontSize: 'var(--font-size-xs)', marginTop: 'var(--space-1)' }}>
-                {ORG_SIZES.find(s => s.value === org.size)?.description}
-              </p>
-            </CardBody>
-          </Card>
-        )}
-
-        {org.resources && org.resources.filter(r => r.direction === 'offer').length > 0 && (
-          <Card style={{ marginTop: 'var(--space-3)' }}>
-            <CardBody>
-              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Resources They Offer</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                {org.resources.filter(r => r.direction === 'offer').map(r => (
-                  <Badge key={r.id} variant="success">{r.resource}</Badge>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-        )}
-
-        {org.resources && org.resources.filter(r => r.direction === 'need').length > 0 && (
-          <Card style={{ marginTop: 'var(--space-3)' }}>
-            <CardBody>
-              <h3 style={{ fontWeight: 'var(--font-weight-semibold)', marginBottom: 'var(--space-2)' }}>Resources They Need</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-                {org.resources.filter(r => r.direction === 'need').map(r => (
-                  <Badge key={r.id} variant="warning">{r.resource}</Badge>
-                ))}
-              </div>
-            </CardBody>
-          </Card>
-        )}
       </div>
     </div>
   );

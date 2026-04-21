@@ -8,6 +8,7 @@
 import dotenv from 'dotenv';
 dotenv.config({ path: '../.env' });
 
+import { Op, col, fn, where as sequelizeWhere } from 'sequelize';
 import { sequelize } from './config/database';
 import { User, Organization, Post } from './models';
 import bcrypt from 'bcryptjs';
@@ -491,7 +492,11 @@ export async function seedDatabase() {
     const orgData = SEED_ORGS[i];
 
     // Check if org already exists by name
-    const existing = await Organization.findOne({ where: { name: orgData.name } });
+    const existing = await Organization.findOne({
+      where: sequelizeWhere(fn('LOWER', col('name')), {
+        [Op.eq]: orgData.name.toLowerCase(),
+      }),
+    });
     if (existing) {
       // Update registrationNo if missing
       if (!existing.registrationNo && orgData.registrationNo) {

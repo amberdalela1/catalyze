@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, col, fn, where as sequelizeWhere } from 'sequelize';
 import { Organization } from '../models';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
@@ -13,10 +13,11 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
     const where: Record<string, unknown> = {};
 
     if (q && typeof q === 'string') {
+      const loweredQuery = q.trim().toLowerCase();
       where[Op.or as unknown as string] = [
-        { name: { [Op.like]: `%${q}%` } },
-        { mission: { [Op.like]: `%${q}%` } },
-        { description: { [Op.like]: `%${q}%` } },
+        sequelizeWhere(fn('LOWER', col('name')), { [Op.like]: `%${loweredQuery}%` }),
+        sequelizeWhere(fn('LOWER', col('mission')), { [Op.like]: `%${loweredQuery}%` }),
+        sequelizeWhere(fn('LOWER', col('description')), { [Op.like]: `%${loweredQuery}%` }),
       ];
     }
 
@@ -26,9 +27,15 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
           'Education', 'Health', 'Environment', 'Community', 'Arts & Culture',
           'Youth', 'Housing', 'Food Security', 'Animal Welfare',
         ];
-        where.category = { [Op.notIn]: standardCategories };
+        where[Op.and as unknown as string] = [
+          sequelizeWhere(fn('LOWER', col('category')), {
+            [Op.notIn]: standardCategories.map((value) => value.toLowerCase()),
+          }),
+        ];
       } else {
-        where.category = category;
+        where[Op.and as unknown as string] = [
+          sequelizeWhere(fn('LOWER', col('category')), category.toLowerCase()),
+        ];
       }
     }
 

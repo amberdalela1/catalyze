@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, col, fn, where as sequelizeWhere } from 'sequelize';
 import { User, Organization, Post, Partnership, Media, OrgResource, Reaction, Message } from '../models';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { STANDARD_RESOURCES } from '../config/resources';
@@ -32,9 +32,10 @@ router.get('/users', async (req: AuthRequest, res: Response): Promise<void> => {
     const { q } = req.query;
     const where: Record<string, unknown> = {};
     if (q && typeof q === 'string') {
+      const loweredQuery = q.trim().toLowerCase();
       where[Op.or as unknown as string] = [
-        { name: { [Op.like]: `%${q}%` } },
-        { email: { [Op.like]: `%${q}%` } },
+        sequelizeWhere(fn('LOWER', col('name')), { [Op.like]: `%${loweredQuery}%` }),
+        sequelizeWhere(fn('LOWER', col('email')), { [Op.like]: `%${loweredQuery}%` }),
       ];
     }
     const users = await User.findAll({
@@ -102,9 +103,10 @@ router.get('/organizations', async (req: AuthRequest, res: Response): Promise<vo
     const { q } = req.query;
     const where: Record<string, unknown> = {};
     if (q && typeof q === 'string') {
+      const loweredQuery = q.trim().toLowerCase();
       where[Op.or as unknown as string] = [
-        { name: { [Op.like]: `%${q}%` } },
-        { category: { [Op.like]: `%${q}%` } },
+        sequelizeWhere(fn('LOWER', col('name')), { [Op.like]: `%${loweredQuery}%` }),
+        sequelizeWhere(fn('LOWER', col('category')), { [Op.like]: `%${loweredQuery}%` }),
       ];
     }
     const orgs = await Organization.findAll({
@@ -165,9 +167,10 @@ router.get('/posts', async (req: AuthRequest, res: Response): Promise<void> => {
     const { q } = req.query;
     const where: Record<string, unknown> = {};
     if (q && typeof q === 'string') {
+      const loweredQuery = q.trim().toLowerCase();
       where[Op.or as unknown as string] = [
-        { title: { [Op.like]: `%${q}%` } },
-        { content: { [Op.like]: `%${q}%` } },
+        sequelizeWhere(fn('LOWER', col('title')), { [Op.like]: `%${loweredQuery}%` }),
+        sequelizeWhere(fn('LOWER', col('content')), { [Op.like]: `%${loweredQuery}%` }),
       ];
     }
     const posts = await Post.findAll({
@@ -253,7 +256,10 @@ router.get('/messages', async (req: AuthRequest, res: Response): Promise<void> =
     const { q } = req.query;
     const where: Record<string, unknown> = {};
     if (q && typeof q === 'string') {
-      where.content = { [Op.like]: `%${q}%` };
+      const loweredQuery = q.trim().toLowerCase();
+      where[Op.and as unknown as string] = [
+        sequelizeWhere(fn('LOWER', col('content')), { [Op.like]: `%${loweredQuery}%` }),
+      ];
     }
     const messages = await Message.findAll({
       where,

@@ -18,3 +18,4 @@ Thumbs.db
 # Server
 server/node_modules
 server/dist
+server/*.sqlite
