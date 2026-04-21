@@ -35,6 +35,7 @@ interface Organization {
   state?: string;
   logoUrl?: string;
   mission?: string;
+  matchReason?: string | null;
 }
 
 interface MsgStatus {
@@ -260,9 +261,9 @@ export default function SearchPage() {
                       {org.mission.length > 120 ? org.mission.slice(0, 120) + '…' : org.mission}
                     </p>
                   )}
-                  {recommendedReasons[org.id] && (
+                  {(org.matchReason || recommendedReasons[org.id]) && (
                     <div className={styles.matchSignals}>
-                      {parseRecommendationSignals(recommendedReasons[org.id]).map((signal, i) => {
+                      {parseRecommendationSignals(org.matchReason || recommendedReasons[org.id]).map((signal, i) => {
                         let icon: ReactNode | null = null;
                         if (signal.type === 'category') {
                           icon = <TagIcon size={12} />;

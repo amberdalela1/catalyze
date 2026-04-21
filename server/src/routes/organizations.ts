@@ -143,11 +143,65 @@ router.get('/search', authenticate, async (req: AuthRequest, res: Response): Pro
       order: [['name', 'ASC']],
     });
 
+    const viewerOrg = await Organization.findOne({
+      where: { ownerId: req.userId },
+      attributes: ['id'],
+    });
+
+    const results = orgs.map((org) => ({ ...org.toJSON(), matchReason: null as string | null }));
+
+    if (viewerOrg && orgs.length > 0) {
+      const orgIdsToLoad = [viewerOrg.id, ...orgs.map((o) => o.id)];
+      const resources = await OrgResource.findAll({
+        where: { orgId: { [Op.in]: orgIdsToLoad } },
+        attributes: ['orgId', 'resource', 'direction'],
+      });
+
+      const offeredByOrg = new Map<number, string[]>();
+      const neededByOrg = new Map<number, string[]>();
+
+      for (const row of resources) {
+        const key = row.orgId;
+        if (row.direction === 'offer') {
+          const list = offeredByOrg.get(key) ?? [];
+          list.push(row.resource);
+          offeredByOrg.set(key, list);
+        } else if (row.direction === 'need') {
+          const list = neededByOrg.get(key) ?? [];
+          list.push(row.resource);
+          neededByOrg.set(key, list);
+        }
+      }
+
+      const myOffer = offeredByOrg.get(viewerOrg.id) ?? [];
+      const myNeed = neededByOrg.get(viewerOrg.id) ?? [];
+      const myNeedSet = new Set(myNeed.map((r) => r.toLowerCase()));
+
+      for (const org of results) {
+        const theirOffer = offeredByOrg.get(org.id) ?? [];
+        const theirNeed = neededByOrg.get(org.id) ?? [];
+        const theirNeedSet = new Set(theirNeed.map((r) => r.toLowerCase()));
+
+        const theyOfferINeed = theirOffer.filter((r) => myNeedSet.has(r.toLowerCase()));
+        const iOfferTheyNeed = myOffer.filter((r) => theirNeedSet.has(r.toLowerCase()));
+
+        const reasonParts: string[] = [];
+        if (theyOfferINeed.length > 0) {
+          reasonParts.push(`They offer ${theyOfferINeed.slice(0, 3).join(', ')} that you need`);
+        }
+        if (iOfferTheyNeed.length > 0) {
+          reasonParts.push(`You can offer them ${iOfferTheyNeed.slice(0, 3).join(', ')}`);
+        }
+
+        org.matchReason = reasonParts.length > 0 ? reasonParts.join(' · ') : null;
+      }
+    }
+
     if (lat && lng) {
       const userLat = parseFloat(lat as string);
       const userLng = parseFloat(lng as string);
       if (!isNaN(userLat) && !isNaN(userLng)) {
-        const sorted = orgs.sort((a, b) => {
+        const sorted = results.sort((a, b) => {
           if (!a.latitude || !a.longitude) return 1;
           if (!b.latitude || !b.longitude) return -1;
           const distA = Math.hypot(a.latitude - userLat, a.longitude - userLng);
@@ -159,7 +213,7 @@ router.get('/search', authenticate, async (req: AuthRequest, res: Response): Pro
       }
     }
 
-    res.json(orgs);
+    res.json(results);
   } catch (error) {
     console.error('Search error:', error);
     res.status(500).json({ message: 'Internal server error' });
