@@ -83,7 +83,6 @@ router.get('/recommendations', authenticate, async (req: AuthRequest, res: Respo
     const candidates = await Organization.findAll({
       where: { id: { [Op.notIn]: excludeIds } },
       attributes: ['id', 'name', 'mission', 'category', 'city', 'state', 'logoUrl', 'latitude', 'longitude', 'size'],
-      limit: 50,
     });
 
     if (candidates.length === 0) {

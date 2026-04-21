@@ -12,7 +12,42 @@ import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
 import { StarIcon, DiamondIcon, LocationIcon, HourglassIcon, CheckCircleIcon } from '../components/ui/Icons';
 import { ORG_SIZES } from '../utils/resources';
+import { RecommendationSignal } from '../utils/recommendationSignals';
 import headerStyles from '../components/ui/Header.module.css';
+
+const SIGNAL_COLORS: Record<RecommendationSignal['type'], string> = {
+  category: 'var(--color-primary)',
+  location: 'var(--color-success)',
+  size: 'var(--color-warning)',
+  resource: 'var(--color-accent)',
+};
+
+function computeResourceSignals(myOffered: string[], myNeeded: string[], theirOffered: string[], theirNeeded: string[]): RecommendationSignal[] {
+  const myNeededSet = new Set(myNeeded.map(r => r.toLowerCase()));
+  const myOfferedSet = new Set(myOffered.map(r => r.toLowerCase()));
+  const theyOfferINeed = theirOffered.filter(r => myNeededSet.has(r.toLowerCase()));
+  const iOfferTheyNeed = myOffered.filter(r => new Set(theirNeeded.map(x => x.toLowerCase())).has(r.toLowerCase()));
+  void myOfferedSet;
+  const signals: RecommendationSignal[] = [];
+  const titles: string[] = [];
+  let count = 0;
+  if (theyOfferINeed.length > 0) {
+    titles.push(`They offer ${theyOfferINeed.slice(0, 3).join(', ')} that you need`);
+    count += theyOfferINeed.length;
+  }
+  if (iOfferTheyNeed.length > 0) {
+    titles.push(`You can offer them ${iOfferTheyNeed.slice(0, 3).join(', ')}`);
+    count += iOfferTheyNeed.length;
+  }
+  if (count > 0) {
+    signals.push({
+      type: 'resource',
+      label: `${count} resource${count === 1 ? '' : 's'} matched`,
+      title: titles.join(' · '),
+    });
+  }
+  return signals;
+}
 
 interface OrgResource {
   id: number;
@@ -58,11 +93,23 @@ export default function OrgProfilePage() {
   const [connecting, setConnecting] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
   const [favorited, setFavorited] = useState(false);
+  const [matchSignals, setMatchSignals] = useState<RecommendationSignal[]>([]);
 
   useEffect(() => {
-    api.get<OrgDetail>(`/organizations/${id}`)
-      .then((data) => { setOrg(data); setFavorited(!!data.isFavorited); })
-      .catch(() => navigate('/feed', { replace: true }))
+    Promise.all([
+      api.get<OrgDetail>(`/organizations/${id}`),
+      api.get<{ resources?: OrgResource[] }>('/organizations/mine').catch(() => null),
+    ]).then(([data, mine]) => {
+      setOrg(data);
+      setFavorited(!!data.isFavorited);
+      if (mine?.resources && data.resources) {
+        const myOffered = mine.resources.filter(r => r.direction === 'offer').map(r => r.resource);
+        const myNeeded = mine.resources.filter(r => r.direction === 'need').map(r => r.resource);
+        const theirOffered = data.resources.filter(r => r.direction === 'offer').map(r => r.resource);
+        const theirNeeded = data.resources.filter(r => r.direction === 'need').map(r => r.resource);
+        setMatchSignals(computeResourceSignals(myOffered, myNeeded, theirOffered, theirNeeded));
+      }
+    }).catch(() => navigate('/feed', { replace: true }))
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
@@ -127,6 +174,33 @@ export default function OrgProfilePage() {
           <p style={{ color: 'var(--color-gray-500)', marginTop: 'var(--space-2)', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
             <LocationIcon size={16} /> {org.city}{org.state ? `, ${org.state}` : ''}
           </p>
+        )}
+        {matchSignals.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)', justifyContent: 'center', marginTop: 'var(--space-2)' }}>
+            {matchSignals.map((signal, i) => {
+              const color = SIGNAL_COLORS[signal.type];
+              return (
+                <span
+                  key={i}
+                  title={signal.title}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    fontSize: '10px',
+                    fontWeight: 500,
+                    color,
+                    background: `color-mix(in srgb, ${color} 10%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${color} 24%, transparent)`,
+                    borderRadius: 'var(--radius-full)',
+                    padding: '2px 6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {signal.label}
+                </span>
+              );
+            })}
+          </div>
         )}
       </div>
 

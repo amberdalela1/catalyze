@@ -59,7 +59,22 @@ export default function FeedPage() {
   );
   const [msgStatus, setMsgStatus] = useState<Record<number, MsgStatus>>({});
   const [favSet, setFavSet] = useState<Set<number>>(new Set());
+  const [recommendedReasons, setRecommendedReasons] = useState<Record<number, string>>({});
   const refreshedRecommendedRef = useRef(false);
+
+  const fetchRecommendations = useCallback(async (forceRefresh = false) => {
+    try {
+      const endpoint = forceRefresh ? '/feed/recommendations?refresh=1' : '/feed/recommendations';
+      const recs = await api.get<{ id: number; reason?: string }[]>(endpoint);
+      const reasons: Record<number, string> = {};
+      recs.forEach((r) => {
+        if (r.reason) reasons[r.id] = r.reason;
+      });
+      setRecommendedReasons(reasons);
+    } catch {
+      setRecommendedReasons({});
+    }
+  }, []);
 
   const fetchMsgStatus = useCallback(async (orgIds: number[]) => {
     const unique = [...new Set(orgIds)].filter(Boolean);
@@ -107,7 +122,11 @@ export default function FeedPage() {
         if (shouldRefreshRecommended) {
           refreshedRecommendedRef.current = true;
         }
-        await Promise.all([fetchPosts(activeTab, shouldRefreshRecommended), fetchFavorites()]);
+        await Promise.all([
+          fetchPosts(activeTab, shouldRefreshRecommended),
+          fetchFavorites(),
+          fetchRecommendations(shouldRefreshRecommended),
+        ]);
       } finally {
         setLoading(false);
       }
@@ -126,10 +145,13 @@ export default function FeedPage() {
         refreshedRecommendedRef.current = true;
       }
       await fetchPosts(tab, shouldRefreshRecommended);
+      if (shouldRefreshRecommended) {
+        await fetchRecommendations(true);
+      }
     } finally {
       setTabLoading(false);
     }
-  }, [fetchPosts]);
+  }, [fetchPosts, fetchRecommendations]);
 
   if (loading) return <LoadingCenter size="lg" />;
 
@@ -192,9 +214,9 @@ export default function FeedPage() {
                       <p className={styles.postTime}>
                         {new Date(post.createdAt).toLocaleDateString()}
                       </p>
-                      {post.recommendationReason && (
+                      {(post.recommendationReason || recommendedReasons[post.organization.id]) && (
                         <div className={styles.matchSignals}>
-                          {parseRecommendationSignals(post.recommendationReason).map((signal, i) => {
+                          {parseRecommendationSignals(post.recommendationReason || recommendedReasons[post.organization.id]).map((signal, i) => {
                             let icon: React.ReactNode | null = null;
                             if (signal.type === 'category') {
                               icon = <TagIcon size={11} />;

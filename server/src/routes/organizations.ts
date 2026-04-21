@@ -106,11 +106,16 @@ router.get('/search', authenticate, async (req: AuthRequest, res: Response): Pro
 
     if (q && typeof q === 'string') {
       const loweredQuery = q.trim().toLowerCase();
-      where[Op.or as unknown as string] = [
-        sequelizeWhere(fn('LOWER', col('name')), { [Op.like]: `%${loweredQuery}%` }),
-        sequelizeWhere(fn('LOWER', col('mission')), { [Op.like]: `%${loweredQuery}%` }),
-        sequelizeWhere(fn('LOWER', col('description')), { [Op.like]: `%${loweredQuery}%` }),
-      ];
+      if (loweredQuery.length > 0) {
+        where[Op.or as unknown as string] = [
+          sequelizeWhere(fn('LOWER', col('name')), { [Op.like]: `%${loweredQuery}%` }),
+          sequelizeWhere(fn('LOWER', col('mission')), { [Op.like]: `%${loweredQuery}%` }),
+          sequelizeWhere(fn('LOWER', col('description')), { [Op.like]: `%${loweredQuery}%` }),
+          sequelizeWhere(fn('LOWER', col('category')), { [Op.like]: `%${loweredQuery}%` }),
+          sequelizeWhere(fn('LOWER', col('city')), { [Op.like]: `%${loweredQuery}%` }),
+          sequelizeWhere(fn('LOWER', col('state')), { [Op.like]: `%${loweredQuery}%` }),
+        ];
+      }
     }
 
     if (category && typeof category === 'string') {

@@ -260,7 +260,7 @@ export default function SearchPage() {
                       {org.mission.length > 120 ? org.mission.slice(0, 120) + '…' : org.mission}
                     </p>
                   )}
-                  {viewFilter === 'recommended' && recommendedReasons[org.id] && (
+                  {recommendedReasons[org.id] && (
                     <div className={styles.matchSignals}>
                       {parseRecommendationSignals(recommendedReasons[org.id]).map((signal, i) => {
                         let icon: ReactNode | null = null;
