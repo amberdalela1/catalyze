@@ -10,7 +10,7 @@ import { LoadingCenter } from '../components/ui/Loading';
 import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
 import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
-import { StarIcon, DiamondIcon, LocationIcon, EmailIcon, PhoneIcon, BuildingIcon, HourglassIcon, CheckCircleIcon } from '../components/ui/Icons';
+import { StarIcon, DiamondIcon, LocationIcon, HourglassIcon, CheckCircleIcon } from '../components/ui/Icons';
 import { ORG_SIZES } from '../utils/resources';
 import headerStyles from '../components/ui/Header.module.css';
 

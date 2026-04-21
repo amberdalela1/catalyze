@@ -157,7 +157,7 @@ export default function ConversationPage() {
         padding: 'var(--space-3) var(--space-4)',
         paddingBottom: 'calc(var(--safe-area-bottom, 0px) + var(--space-3))',
         borderTop: '1px solid var(--color-gray-200)',
-        background: 'var(--color-background, #fff)',
+        background: 'var(--color-gray-50)',
       }}>
         {canSend ? (
           <>
@@ -173,6 +173,8 @@ export default function ConversationPage() {
                 padding: 'var(--space-2) var(--space-3)',
                 borderRadius: '999px',
                 border: '1px solid var(--color-gray-300)',
+                background: 'var(--color-gray-100)',
+                color: 'var(--color-gray-900)',
                 fontSize: 'var(--font-size-sm)',
                 outline: 'none',
               }}
