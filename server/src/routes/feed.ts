@@ -18,6 +18,65 @@ async function buildOrgWithResources(org: Organization): Promise<OrgWithResource
   };
 }
 
+function computeResourceMatchReason(
+  myOffered: string[],
+  myNeeded: string[],
+  theirOffered: string[],
+  theirNeeded: string[],
+): string | null {
+  const myNeededSet = new Set(myNeeded.map((r) => r.toLowerCase()));
+  const theirNeededSet = new Set(theirNeeded.map((r) => r.toLowerCase()));
+
+  const theyOfferINeed = theirOffered.filter((r) => myNeededSet.has(r.toLowerCase()));
+  const iOfferTheyNeed = myOffered.filter((r) => theirNeededSet.has(r.toLowerCase()));
+
+  const parts: string[] = [];
+  if (theyOfferINeed.length > 0) {
+    parts.push(`They offer ${theyOfferINeed.slice(0, 3).join(', ')} that you need`);
+  }
+  if (iOfferTheyNeed.length > 0) {
+    parts.push(`You can offer them ${iOfferTheyNeed.slice(0, 3).join(', ')}`);
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+async function buildMatchReasonByOrgId(viewerOrgId: number, orgIds: number[]): Promise<Map<number, string>> {
+  const uniqueOrgIds = [...new Set(orgIds)].filter((id) => id !== viewerOrgId);
+  if (uniqueOrgIds.length === 0) return new Map<number, string>();
+
+  const resources = await OrgResource.findAll({
+    where: { orgId: { [Op.in]: [viewerOrgId, ...uniqueOrgIds] } },
+    attributes: ['orgId', 'resource', 'direction'],
+  });
+
+  const offeredByOrg = new Map<number, string[]>();
+  const neededByOrg = new Map<number, string[]>();
+
+  for (const row of resources) {
+    const listMap = row.direction === 'offer' ? offeredByOrg : neededByOrg;
+    const list = listMap.get(row.orgId) ?? [];
+    list.push(row.resource);
+    listMap.set(row.orgId, list);
+  }
+
+  const myOffered = offeredByOrg.get(viewerOrgId) ?? [];
+  const myNeeded = neededByOrg.get(viewerOrgId) ?? [];
+
+  const reasonByOrgId = new Map<number, string>();
+  for (const orgId of uniqueOrgIds) {
+    const reason = computeResourceMatchReason(
+      myOffered,
+      myNeeded,
+      offeredByOrg.get(orgId) ?? [],
+      neededByOrg.get(orgId) ?? [],
+    );
+    if (reason) reasonByOrgId.set(orgId, reason);
+  }
+
+  return reasonByOrgId;
+}
+
 // AI-powered recommendations
 router.get('/recommendations', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -182,7 +241,12 @@ router.get('/posts', authenticate, async (req: AuthRequest, res: Response): Prom
       limit: 50,
     });
 
-    res.json(await enrichPosts(posts));
+    const reasonByOrgId = await buildMatchReasonByOrgId(org.id, posts.map((p) => p.orgId));
+    const enriched = await enrichPosts(posts);
+    res.json(enriched.map((p: any) => ({
+      ...p,
+      matchReason: reasonByOrgId.get(p.orgId) ?? null,
+    })));
   } catch (error) {
     console.error('Feed posts error:', error);
     res.json([]);
@@ -236,7 +300,15 @@ router.get('/posts/all', authenticate, async (req: AuthRequest, res: Response): 
       order: [['createdAt', 'DESC']],
       limit: 50,
     });
-    res.json(await enrichPosts(posts));
+
+    const reasonByOrgId = org
+      ? await buildMatchReasonByOrgId(org.id, posts.map((p) => p.orgId))
+      : new Map<number, string>();
+    const enriched = await enrichPosts(posts);
+    res.json(enriched.map((p: any) => ({
+      ...p,
+      matchReason: reasonByOrgId.get(p.orgId) ?? null,
+    })));
   } catch (error) {
     console.error('All posts error:', error);
     res.json([]);
@@ -246,6 +318,8 @@ router.get('/posts/all', authenticate, async (req: AuthRequest, res: Response): 
 // Posts from favorited orgs
 router.get('/posts/favorites', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const org = await Organization.findOne({ where: { ownerId: req.userId } });
+
     const favorites = await Favorite.findAll({
       where: { userId: req.userId },
       attributes: ['orgId'],
@@ -264,7 +338,14 @@ router.get('/posts/favorites', authenticate, async (req: AuthRequest, res: Respo
       limit: 50,
     });
 
-    res.json(await enrichPosts(posts));
+    const reasonByOrgId = org
+      ? await buildMatchReasonByOrgId(org.id, posts.map((p) => p.orgId))
+      : new Map<number, string>();
+    const enriched = await enrichPosts(posts);
+    res.json(enriched.map((p: any) => ({
+      ...p,
+      matchReason: reasonByOrgId.get(p.orgId) ?? null,
+    })));
   } catch (error) {
     console.error('Favorites posts error:', error);
     res.json([]);
@@ -342,8 +423,8 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
       return;
     }
 
-    // Map orgId → reason so we can attach it to each post
-    const reasonByOrgId = new Map(recs.map((r) => [r.recommendedOrgId, r.reason]));
+    // Map orgId -> recommendation reason and resource match reason
+    const recommendationReasonByOrgId = new Map(recs.map((r) => [r.recommendedOrgId, r.reason]));
 
     const posts = await Post.findAll({
       where: { orgId: { [Op.in]: recOrgIds } },
@@ -352,10 +433,12 @@ router.get('/posts/recommended', authenticate, async (req: AuthRequest, res: Res
       limit: 50,
     });
 
+    const resourceReasonByOrgId = await buildMatchReasonByOrgId(org.id, posts.map((p) => p.orgId));
     const enriched = await enrichPosts(posts);
     res.json(enriched.map((p: any) => ({
       ...p,
-      recommendationReason: reasonByOrgId.get(p.orgId) ?? null,
+      matchReason: resourceReasonByOrgId.get(p.orgId) ?? null,
+      recommendationReason: recommendationReasonByOrgId.get(p.orgId) ?? null,
     })));
   } catch (error) {
     console.error('Recommended posts error:', error);

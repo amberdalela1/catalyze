@@ -6,7 +6,7 @@ import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import { LoadingCenter, Spinner } from '../components/ui/Loading';
 import MediaCollage, { MediaItem } from '../components/ui/MediaCollage';
-import { HeartIcon, MegaphoneIcon, PlusIcon, CheckCircleIcon, TagIcon, LocationIcon, BuildingIcon } from '../components/ui/Icons';
+import { HeartIcon, MegaphoneIcon, PlusIcon, CheckCircleIcon, TagIcon, LocationIcon, BuildingIcon, SearchIcon } from '../components/ui/Icons';
 import MessageBubbleIcon from '../components/ui/MessageBubbleIcon';
 import HandshakeIcon from '../components/ui/HandshakeIcon';
 import { parseRecommendationSignals } from '../utils/recommendationSignals';
@@ -24,6 +24,7 @@ interface Post {
   media?: MediaItem[];
   _count?: { reactions: number };
   recommendationReason?: string | null;
+  matchReason?: string | null;
 }
 
 type FeedTab = 'all' | 'connected' | 'favorites' | 'recommended';
@@ -54,6 +55,7 @@ export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FeedTab>(
     () => (sessionStorage.getItem('feedTab') as FeedTab) || 'all'
   );
@@ -153,6 +155,23 @@ export default function FeedPage() {
     }
   }, [fetchPosts, fetchRecommendations]);
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredPosts = normalizedQuery.length === 0
+    ? posts
+    : posts.filter((post) => {
+      const haystack = [
+        post.title,
+        post.content,
+        post.type,
+        post.organization.name,
+        post.author?.name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+
   if (loading) return <LoadingCenter size="lg" />;
 
   return (
@@ -177,18 +196,31 @@ export default function FeedPage() {
         ))}
       </div>
 
+      <div className={styles.searchBar}>
+        <span className={styles.searchIcon}><SearchIcon size={16} /></span>
+        <input
+          className={styles.searchInput}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search feed posts..."
+          aria-label="Search feed posts"
+        />
+      </div>
+
       {/* Posts Feed */}
       <section className={styles.section}>
         {tabLoading ? (
           <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
             <Spinner />
           </div>
-        ) : posts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}><MegaphoneIcon size={48} /></div>
             <h3 className={styles.emptyTitle}>No posts yet</h3>
             <p className={styles.emptyText}>
-              {activeTab === 'connected'
+              {normalizedQuery.length > 0
+                ? 'No posts match your search.'
+                : activeTab === 'connected'
                 ? 'Connect with other organizations to see their posts here.'
                 : activeTab === 'favorites'
                 ? 'Favorite some organizations to see their posts here.'
@@ -198,7 +230,7 @@ export default function FeedPage() {
             </p>
           </div>
         ) : (
-          posts.map((post) => (
+          filteredPosts.map((post) => (
             <Card key={post.id} className={styles.postCard}>
               <CardHeader>
                 <div className={styles.postHeaderRow}>
@@ -214,9 +246,9 @@ export default function FeedPage() {
                       <p className={styles.postTime}>
                         {new Date(post.createdAt).toLocaleDateString()}
                       </p>
-                      {(post.recommendationReason || recommendedReasons[post.organization.id]) && (
+                      {(post.matchReason || post.recommendationReason || recommendedReasons[post.organization.id]) && (
                         <div className={styles.matchSignals}>
-                          {parseRecommendationSignals(post.recommendationReason || recommendedReasons[post.organization.id]).map((signal, i) => {
+                          {parseRecommendationSignals(post.matchReason || post.recommendationReason || recommendedReasons[post.organization.id]).map((signal, i) => {
                             let icon: React.ReactNode | null = null;
                             if (signal.type === 'category') {
                               icon = <TagIcon size={11} />;
